@@ -392,22 +392,22 @@ h2 {
 }
 
 @media (max-width: 1024px) {
-  /* Center Brand Logo in Top Header Bar on Mobile Viewports */
+  /* Left Align Brand Logo in Top Header Bar on Mobile Viewports */
   .top-header-container {
     display: flex !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     align-items: center !important;
-    text-align: center !important;
+    text-align: left !important;
     width: 100% !important;
   }
 
   .mobile-brand-logo-wrap {
     display: flex !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     align-items: center !important;
-    width: 100% !important;
-    margin: 0 auto !important;
-    text-align: center !important;
+    width: auto !important;
+    margin: 0 !important;
+    text-align: left !important;
   }
 
   /* Hide Desktop Top Navbar Links & Action Buttons on Mobile View */

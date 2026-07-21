@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function BrandLogo({ size = 44, showText = true }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.75rem' }}>
       <svg
         width={size}
         height={size}
