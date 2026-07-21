@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Sparkles, BookOpen, Phone, User } from 'lucide-react';
+import { Home, Sparkles, Phone, User } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export default function MobileBottomBar({ activePage, setActivePage }) {
@@ -8,7 +8,6 @@ export default function MobileBottomBar({ activePage, setActivePage }) {
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'services', label: 'Services', icon: Sparkles },
-    { id: 'blog', label: 'Blogs', icon: BookOpen },
     { id: 'contact', label: 'Contact', icon: Phone },
     { id: 'login', label: user ? 'Profile' : 'Profile', icon: User }
   ];
@@ -42,10 +41,10 @@ export default function MobileBottomBar({ activePage, setActivePage }) {
               transition: 'var(--transition-fast)'
             }}
           >
-            <Icon size={20} color={isActive ? '#0284C7' : 'var(--text-muted)'} />
+            <Icon size={21} color={isActive ? '#0284C7' : 'var(--text-muted)'} />
             <span
               style={{
-                fontSize: '0.72rem',
+                fontSize: '0.75rem',
                 fontWeight: isActive ? 700 : 600,
                 fontFamily: 'var(--font-heading)',
                 lineHeight: 1
