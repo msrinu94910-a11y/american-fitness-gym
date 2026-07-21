@@ -63,17 +63,17 @@ export default function HomePage({ setActivePage }) {
             
             {/* Left Content */}
             <div style={{ textAlign: 'left', width: '100%' }}>
-              <div className="section-tag" style={{ marginBottom: '0.75rem' }}>
+              <div className="section-tag" style={{ marginBottom: '0.85rem' }}>
                 <Flame size={14} /> Welcome to American Fitness Project
               </div>
               
-              <h1 style={{ fontSize: 'clamp(1.75rem, 5.5vw, 3.8rem)', marginBottom: '0.85rem', lineHeight: '1.15', color: 'var(--text-main)', fontFamily: 'var(--font-heading)', wordBreak: 'break-word' }}>
+              <h1 style={{ fontSize: 'clamp(1.75rem, 5.5vw, 3.8rem)', marginBottom: '1rem', lineHeight: '1.18', color: 'var(--text-main)', fontFamily: 'var(--font-heading)', wordBreak: 'break-word' }}>
                 TRANSFORM YOUR BODY. <br />
                 <span className="gradient-text">UNLEASH YOUR POTENTIAL.</span>
               </h1>
 
-              <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.9rem, 2.4vw, 1.05rem)', marginBottom: '1.25rem', lineHeight: '1.6', maxWidth: '580px' }}>
-                State-of-the-art 24/7 facility featuring 20,000 sq. ft. of Rogue Olympic powerlifting rigs, Woodway custom cardio decks, modern Arsenal Strength equipment, and therapeutic Finnish sauna recovery spas.
+              <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.92rem, 2.4vw, 1.08rem)', marginBottom: '1.5rem', lineHeight: '1.65', maxWidth: '590px' }}>
+                Welcome to American Fitness Project—a 20,000 sq. ft. flagship training facility built for powerlifters, athletes, and fitness enthusiasts. Featuring Rogue Olympic Monster racks, calibrated Eleiko plates, Woodway cardio decks, and therapeutic 190°F Finnish cedarwood saunas with 50°F cold plunge contrast therapy. Open 24/7/365 with encrypted mobile app keycard access.
               </p>
 
               {/* Side-by-Side Action Buttons for Mobile & Desktop */}
@@ -86,12 +86,29 @@ export default function HomePage({ setActivePage }) {
                 </button>
               </div>
 
-              {/* Mobile Quick Chips Bar */}
-              <div className="mobile-chips-bar">
-                <div className="chip-pill"><Dumbbell size={14} color="#0284C7" /> Rogue Weight Floor</div>
-                <div className="chip-pill"><Flame size={14} color="#0D9488" /> Cedarwood Sauna</div>
-                <div className="chip-pill"><Clock size={14} color="#0891b2" /> 24/7 App Keycard</div>
-                <div className="chip-pill"><Star size={14} color="#d97706" /> 4.9/5 Rating</div>
+              {/* Elaborated Mobile Feature Highlight List */}
+              <div className="mobile-feature-highlights" style={{ marginTop: '1.25rem', padding: '1.15rem 1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0284C7', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles size={14} color="#0284C7" /> FACILITY HIGHLIGHTS & AMENITIES
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <CheckCircle2 color="#0284C7" size={17} style={{ flexShrink: 0 }} />
+                    <span><strong>20,000 Sq. Ft. Olympic Arena:</strong> 12 Rogue Rigs & Eleiko Plates</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <CheckCircle2 color="#0D9488" size={17} style={{ flexShrink: 0 }} />
+                    <span><strong>Finnish Cedarwood Spa:</strong> 190°F Sauna & 50°F Cold Plunge</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <CheckCircle2 color="#0891b2" size={17} style={{ flexShrink: 0 }} />
+                    <span><strong>24/7 Mobile Keycard Access:</strong> Open 365 Days a Year</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <CheckCircle2 color="#d97706" size={17} style={{ flexShrink: 0 }} />
+                    <span><strong>4.9 / 5.0 Member Rating:</strong> Over 500+ Verified Reviews</span>
+                  </div>
+                </div>
               </div>
 
               {/* Desktop/Tablet Checkmarks */}
