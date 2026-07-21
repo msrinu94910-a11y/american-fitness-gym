@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function BrandLogo({ size = 44, showText = true }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>
+    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
       <svg
         width={size}
         height={size}
@@ -44,7 +44,7 @@ export default function BrandLogo({ size = 44, showText = true }) {
       </svg>
 
       {showText && (
-        <div>
+        <div style={{ textAlign: 'left' }}>
           <span
             className="brand-text"
             style={{
