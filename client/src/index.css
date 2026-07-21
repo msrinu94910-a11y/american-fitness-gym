@@ -392,6 +392,15 @@ h2 {
 }
 
 @media (max-width: 1024px) {
+  /* Center Brand Logo in Top Header Bar on Mobile Viewports */
+  .top-header-container {
+    justify-content: center !important;
+  }
+
+  .mobile-brand-logo-wrap {
+    margin: 0 auto !important;
+  }
+
   /* Hide Desktop Top Navbar Links & Action Buttons on Mobile View */
   .desktop-nav,
   .desktop-actions {

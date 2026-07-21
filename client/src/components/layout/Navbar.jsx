@@ -28,11 +28,12 @@ export default function Navbar({ activePage, setActivePage }) {
         transition: 'var(--transition-normal)'
       }}
     >
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="container top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Brand Logo */}
         <div
           onClick={() => setActivePage('home')}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          className="mobile-brand-logo-wrap"
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <BrandLogo height={42} />
         </div>
