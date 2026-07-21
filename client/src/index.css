@@ -209,6 +209,17 @@ h2 {
   white-space: nowrap !important;
 }
 
+/* Desktop Header Rules */
+.mobile-logo-left,
+.mobile-title-center,
+.mobile-header-spacer {
+  display: none !important;
+}
+
+.desktop-brand-logo-wrap {
+  display: flex !important;
+}
+
 /* Mobile Scroll Chips Bar (Hidden on Desktop) */
 .mobile-chips-bar {
   display: none !important;
@@ -392,22 +403,34 @@ h2 {
 }
 
 @media (max-width: 1024px) {
-  /* Left Align Brand Logo in Top Header Bar on Mobile Viewports */
+  /* Hide Desktop Logo Wrap on Mobile Viewports */
+  .desktop-brand-logo-wrap {
+    display: none !important;
+  }
+
+  /* Show Logo Left + Brand Title Centered in Middle on Mobile */
   .top-header-container {
     display: flex !important;
-    justify-content: flex-start !important;
+    justify-content: space-between !important;
     align-items: center !important;
-    text-align: left !important;
     width: 100% !important;
   }
 
-  .mobile-brand-logo-wrap {
+  .mobile-logo-left {
     display: flex !important;
-    justify-content: flex-start !important;
     align-items: center !important;
-    width: auto !important;
-    margin: 0 !important;
-    text-align: left !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mobile-title-center {
+    display: block !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+  }
+
+  .mobile-header-spacer {
+    display: block !important;
+    flex-shrink: 0 !important;
   }
 
   /* Hide Desktop Top Navbar Links & Action Buttons on Mobile View */

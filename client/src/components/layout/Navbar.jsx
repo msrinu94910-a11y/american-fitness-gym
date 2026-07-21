@@ -24,16 +24,40 @@ export default function Navbar({ activePage, setActivePage }) {
         background: 'rgba(255, 255, 255, 0.96)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-glass)',
-        padding: '0.85rem 0',
+        padding: '0.75rem 0',
         transition: 'var(--transition-normal)'
       }}
     >
-      <div className="container top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Brand Logo */}
+      <div className="container top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+        
+        {/* Mobile View: Logo Left + Title Center */}
+        <div onClick={() => setActivePage('home')} className="mobile-logo-left" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <svg width={38} height={38} viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="24" r="8.5" fill="#0D9488" />
+            <path d="M 31 28 C 36 12, 64 12, 69 28 C 61 17, 39 17, 31 28 Z" fill="#0284C7" />
+            <path d="M 50 32 C 34 45, 28 65, 41 88 C 45 72, 47 52, 50 32 Z" fill="#0D9488" />
+            <path d="M 50 32 C 66 45, 72 65, 59 88 C 55 72, 53 52, 50 32 Z" fill="#0284C7" />
+            <path d="M 33 30 C 23 48, 26 75, 43 92 C 45 76, 38 58, 33 30 Z" fill="#0284C7" />
+            <path d="M 67 30 C 77 48, 74 75, 57 92 C 55 76, 62 58, 67 30 Z" fill="#0D9488" />
+          </svg>
+        </div>
+
+        <div onClick={() => setActivePage('home')} className="mobile-title-center" style={{ cursor: 'pointer', textAlign: 'center' }}>
+          <span className="brand-text" style={{ fontWeight: 900, fontSize: '1.2rem', letterSpacing: '0.04em', color: '#0284C7', display: 'block', lineHeight: 1 }}>
+            AMERICAN
+          </span>
+          <span style={{ fontSize: '0.58rem', color: '#0D9488', letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginTop: '2px' }}>
+            FITNESS PROJECT
+          </span>
+        </div>
+
+        <div className="mobile-header-spacer" style={{ width: '38px', height: '38px' }} />
+
+        {/* Desktop View: Unified Brand Logo */}
         <div
           onClick={() => setActivePage('home')}
-          className="mobile-brand-logo-wrap"
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          className="desktop-brand-logo-wrap"
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
           <BrandLogo height={42} />
         </div>
