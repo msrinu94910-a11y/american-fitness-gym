@@ -1,13 +1,15 @@
 import React from 'react';
-import { Home, Sparkles, User } from 'lucide-react';
+import { Home, Sparkles, BookOpen, Phone, User } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export default function MobileBottomBar({ activePage, setActivePage }) {
   const { user } = useApp();
 
   const navItems = [
-    { id: 'services', label: 'Services', icon: Sparkles },
     { id: 'home', label: 'Home', icon: Home },
+    { id: 'services', label: 'Services', icon: Sparkles },
+    { id: 'blog', label: 'Blogs', icon: BookOpen },
+    { id: 'contact', label: 'Contact', icon: Phone },
     { id: 'login', label: user ? 'Profile' : 'Profile', icon: User }
   ];
 
@@ -31,19 +33,19 @@ export default function MobileBottomBar({ activePage, setActivePage }) {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '4px',
+              gap: '3px',
               color: isActive ? '#0284C7' : 'var(--text-muted)',
               flex: 1,
-              padding: '0.5rem 0',
+              padding: '0.45rem 0',
               cursor: 'pointer',
               position: 'relative',
               transition: 'var(--transition-fast)'
             }}
           >
-            <Icon size={22} color={isActive ? '#0284C7' : 'var(--text-muted)'} />
+            <Icon size={20} color={isActive ? '#0284C7' : 'var(--text-muted)'} />
             <span
               style={{
-                fontSize: '0.78rem',
+                fontSize: '0.72rem',
                 fontWeight: isActive ? 700 : 600,
                 fontFamily: 'var(--font-heading)',
                 lineHeight: 1
@@ -57,7 +59,7 @@ export default function MobileBottomBar({ activePage, setActivePage }) {
                 style={{
                   position: 'absolute',
                   top: 0,
-                  width: '32px',
+                  width: '28px',
                   height: '3px',
                   background: 'linear-gradient(135deg, #0284C7 0%, #0D9488 100%)',
                   borderRadius: '0 0 3px 3px'
