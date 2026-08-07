@@ -142,33 +142,52 @@ export default function MobileScannerPage({ setActivePage }) {
   };
 
   // Continuous Frame Scanner Loop
-  const scanFrame = () => {
+  const scanFrame = async () => {
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
       const canvas = canvasRef.current;
       if (video.videoWidth > 0 && video.videoHeight > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        let scannedText = null;
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
-
-        if (code && code.data && code.data.trim() !== '') {
-          const scannedText = code.data.trim();
-          if (scannedText !== lastScannedCodeRef.current) {
-            lastScannedCodeRef.current = scannedText;
-            handleVerify(scannedText);
-
-            // Debounce same code for 3.5 seconds
-            clearTimeout(scanDebounceTimerRef.current);
-            scanDebounceTimerRef.current = setTimeout(() => {
-              lastScannedCodeRef.current = null;
-            }, 3500);
+        // 1. Try Native BarcodeDetector API if supported (Fastest on Mobile Android Chrome/Edge)
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+            const barcodes = await detector.detect(video);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              scannedText = barcodes[0].rawValue.trim();
+            }
+          } catch (e) {
+            // fallback to jsQR
           }
+        }
+
+        // 2. Fallback to jsQR with attemptBoth for maximum recognition rate
+        if (!scannedText && canvas) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth',
+          });
+
+          if (code && code.data && code.data.trim() !== '') {
+            scannedText = code.data.trim();
+          }
+        }
+
+        if (scannedText && scannedText !== lastScannedCodeRef.current) {
+          lastScannedCodeRef.current = scannedText;
+          handleVerify(scannedText);
+
+          // Debounce same code for 3.5 seconds
+          clearTimeout(scanDebounceTimerRef.current);
+          scanDebounceTimerRef.current = setTimeout(() => {
+            lastScannedCodeRef.current = null;
+          }, 3500);
         }
       }
     }
@@ -185,13 +204,20 @@ export default function MobileScannerPage({ setActivePage }) {
         throw new Error('Camera access API is not supported on this browser or context.');
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
+      let stream;
+      try {
+        // Try rear camera first for mobile devices
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      } catch (e) {
+        // Fallback to any available camera (front camera / webcam)
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
@@ -204,7 +230,7 @@ export default function MobileScannerPage({ setActivePage }) {
       animFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
       console.warn('Camera stream error:', err);
-      setCameraError('Unable to open camera stream. Please check camera permissions in browser settings.');
+      setCameraError('Unable to open camera stream. Please check camera permissions or use the photo upload button below.');
       setIsScanning(false);
     }
   };
@@ -547,6 +573,33 @@ export default function MobileScannerPage({ setActivePage }) {
                     >
                       <Camera size={22} /> TURN ON CAMERA SCANNER
                     </button>
+
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      padding: '0.85rem',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.4)',
+                      borderRadius: 'var(--radius-md)',
+                      color: '#fbbf24',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)'
+                    }}>
+                      <ImageIcon size={18} color="#fbbf24" />
+                      <span>UPLOAD / SNAP PHOTO OF QR CODE</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileUpload}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
                   </div>
 
                   {cameraError && (
