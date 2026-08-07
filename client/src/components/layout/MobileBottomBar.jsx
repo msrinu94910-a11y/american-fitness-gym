@@ -12,7 +12,7 @@ export default function MobileBottomBar({ activePage, setActivePage }) {
     ...(isAdmin ? [{ id: 'admin-scanner', label: 'Scanner', icon: QrCode }] : []),
     { id: 'services', label: 'Services', icon: Sparkles },
     { id: 'contact', label: 'Contact', icon: Phone },
-    { id: user ? ((user.role === 'admin' || user.email?.includes('admin')) ? 'admin-scanner' : 'dashboard') : 'login', label: user ? (user.role === 'admin' ? 'Admin' : 'Portal') : 'Profile', icon: user ? LayoutDashboard : User }
+    { id: user ? 'dashboard' : 'login', label: user ? (user.role === 'admin' ? 'Admin' : 'Portal') : 'Profile', icon: user ? LayoutDashboard : User }
   ];
 
   return (
