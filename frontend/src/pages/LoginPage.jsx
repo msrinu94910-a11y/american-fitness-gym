@@ -144,88 +144,19 @@ export default function LoginPage({ setActivePage }) {
   return (
     <div style={{ paddingTop: '3rem', paddingBottom: '6rem', minHeight: '80vh' }}>
       <div className="container" style={{ maxWidth: '520px' }}>
-        
-        {/* Role Access Selection Tabs */}
-        <div
-          style={{
-            display: 'flex',
-            background: 'var(--bg-card)',
-            padding: '0.35rem',
-            borderRadius: 'var(--radius-full)',
-            border: '1px solid var(--border-glass)',
-            marginBottom: '1.5rem',
-            boxShadow: 'var(--shadow-card)'
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setAccountRole('user');
-              setMode('login');
-            }}
-            style={{
-              flex: 1,
-              height: '44px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: accountRole === 'user' ? 'linear-gradient(135deg, #0284C7 0%, #0D9488 100%)' : 'transparent',
-              color: accountRole === 'user' ? '#ffffff' : 'var(--text-muted)',
-              fontWeight: 800,
-              fontSize: '0.9rem',
-              fontFamily: 'var(--font-heading)',
-              cursor: 'pointer',
-              transition: 'var(--transition-fast)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem'
-            }}
-          >
-            <User size={17} /> USER MEMBER
-          </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setAccountRole('admin');
-              setMode('login');
-            }}
-            style={{
-              flex: 1,
-              height: '44px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: accountRole === 'admin' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-              color: accountRole === 'admin' ? '#ffffff' : 'var(--text-muted)',
-              fontWeight: 800,
-              fontSize: '0.9rem',
-              fontFamily: 'var(--font-heading)',
-              cursor: 'pointer',
-              transition: 'var(--transition-fast)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem'
-            }}
-          >
-            <Lock size={17} /> ADMIN OFFICER
-          </button>
-        </div>
-
-        {/* Sign In Mode */}
+        {/* Unified Sign In Card */}
         {mode === 'login' && (
-          <div className="glass-card" style={{ padding: '2.25rem 1.75rem', textAlign: 'center', borderTop: accountRole === 'admin' ? '4px solid #d97706' : '4px solid #0284C7' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: accountRole === 'admin' ? 'rgba(217,119,6,0.15)' : 'rgba(2,132,199,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-              {accountRole === 'admin' ? <Lock size={28} color="#d97706" /> : <User size={28} color="#0284C7" />}
+          <div className="glass-card" style={{ padding: '2.5rem 2rem', textAlign: 'center', borderTop: '4px solid #0284C7' }}>
+            <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: 'var(--gradient-primary)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', boxShadow: 'var(--shadow-glow)' }}>
+              <Lock size={30} />
             </div>
 
-            <h2 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-              {accountRole === 'admin' ? 'ADMIN OFFICER SIGN IN' : 'USER MEMBER SIGN IN'}
+            <h2 style={{ fontSize: '1.65rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)', marginBottom: '0.4rem', fontWeight: 900 }}>
+              PORTAL SIGN IN
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
-              {accountRole === 'admin' 
-                ? 'Sign in to access the Mobile QR Scanner, Attendance Logs & Member Hub.' 
-                : 'Sign in to access your 24/7 Digital QR Keycard Pass & Class Reservations.'}
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.75rem', lineHeight: 1.5 }}>
+              Sign in to access your 24/7 Digital QR Keycard Pass, Class Reservations, or Admin Scanner Portal.
             </p>
 
             <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', textAlign: 'left' }}>
@@ -236,7 +167,7 @@ export default function LoginPage({ setActivePage }) {
                   <input
                     type="email"
                     required
-                    placeholder={accountRole === 'admin' ? 'admin@americanfitness.com' : 'user@example.com'}
+                    placeholder="Enter your email address..."
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     style={inputStyle}
@@ -259,30 +190,30 @@ export default function LoginPage({ setActivePage }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.2rem' }}>
-                {accountRole === 'user' ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginEmail('alex.morgan@example.com');
-                      setLoginPassword('password123');
-                    }}
-                    style={{ background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.2)', color: '#0284C7', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                  >
-                    ⚡ Quick Fill User Demo (Alex)
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginEmail('admin@americanfitness.com');
-                      setLoginPassword('admin123');
-                    }}
-                    style={{ background: 'rgba(217, 119, 6, 0.12)', border: '1px solid rgba(217, 119, 6, 0.3)', color: '#d97706', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                  >
-                    🛡️ Quick Fill Admin Demo (Scanner)
-                  </button>
-                )}
+              {/* Demo Quick Fill Shortcuts */}
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('alex.morgan@example.com');
+                    setLoginPassword('password123');
+                    setAccountRole('user');
+                  }}
+                  style={{ flex: 1, minWidth: '160px', background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.25)', color: '#0284C7', padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                >
+                  ⚡ Fill User Member (Alex)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('admin@americanfitness.com');
+                    setLoginPassword('admin123');
+                    setAccountRole('admin');
+                  }}
+                  style={{ flex: 1, minWidth: '160px', background: 'rgba(217, 119, 6, 0.12)', border: '1px solid rgba(217, 119, 6, 0.35)', color: '#d97706', padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                >
+                  🛡️ Fill Admin Officer (Scanner)
+                </button>
               </div>
 
               <button
@@ -295,11 +226,11 @@ export default function LoginPage({ setActivePage }) {
                   fontSize: '1rem',
                   fontWeight: 800,
                   marginTop: '0.5rem',
-                  background: accountRole === 'admin' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'var(--gradient-primary)',
-                  boxShadow: accountRole === 'admin' ? '0 8px 25px rgba(217, 119, 6, 0.35)' : 'var(--shadow-glow)'
+                  background: 'var(--gradient-primary)',
+                  boxShadow: 'var(--shadow-glow)'
                 }}
               >
-                {loading ? 'Authenticating Access...' : accountRole === 'admin' ? <><Lock size={18} /> Open Admin Scanner Dashboard</> : <><User size={18} /> Open User Member Dashboard</>}
+                {loading ? 'Authenticating Access...' : 'SIGN IN TO PORTAL'}
               </button>
             </form>
 
