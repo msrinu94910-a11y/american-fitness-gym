@@ -190,32 +190,6 @@ export default function LoginPage({ setActivePage }) {
                 </div>
               </div>
 
-              {/* Demo Quick Fill Shortcuts */}
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('alex.morgan@example.com');
-                    setLoginPassword('password123');
-                    setAccountRole('user');
-                  }}
-                  style={{ flex: 1, minWidth: '160px', background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.25)', color: '#0284C7', padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                >
-                  ⚡ Fill User Member (Alex)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('admin@americanfitness.com');
-                    setLoginPassword('admin123');
-                    setAccountRole('admin');
-                  }}
-                  style={{ flex: 1, minWidth: '160px', background: 'rgba(217, 119, 6, 0.12)', border: '1px solid rgba(217, 119, 6, 0.35)', color: '#d97706', padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                >
-                  🛡️ Fill Admin Officer (Scanner)
-                </button>
-              </div>
-
               <button
                 type="submit"
                 disabled={loading}
