@@ -45,7 +45,7 @@ app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`==================================================`);
   console.log(` 🔥 American Fitness Gym API Server running on port ${PORT}`);
   console.log(` 🌐 Health Endpoint: http://localhost:${PORT}/api/health`);
