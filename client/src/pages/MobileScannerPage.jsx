@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import jsQR from 'jsqr';
 import { 
   Camera, QrCode, ShieldCheck, XCircle, AlertTriangle, CheckCircle2, 
   Clock, User, Search, Sparkles, RefreshCw, Volume2, VolumeX, 
@@ -38,6 +39,10 @@ export default function MobileScannerPage({ setActivePage }) {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const canvasRef = useRef(typeof document !== 'undefined' ? document.createElement('canvas') : null);
+  const lastScannedCodeRef = useRef(null);
+  const scanDebounceTimerRef = useRef(null);
 
   // Load existing attendance log and analytics on mount
   const loadDashboardData = async () => {
@@ -65,13 +70,29 @@ export default function MobileScannerPage({ setActivePage }) {
   // Image Upload QR Reader Handler
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      showToast('Reading Member QR Image...', 'info');
-      // Extract or test with member ID
-      setTimeout(() => {
-        handleVerify('AFG-882910');
-      }, 600);
-    }
+    if (!file) return;
+
+    showToast('Reading Member QR Image...', 'info');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code && code.data) {
+          handleVerify(code.data);
+        } else {
+          showToast('No valid QR code detected in uploaded image.', 'error');
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   // Audio & Haptic Feedback Synthesizer
@@ -120,6 +141,40 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   };
 
+  // Continuous Frame Scanner Loop
+  const scanFrame = () => {
+    const video = videoRef.current;
+    if (video && video.readyState >= 2) {
+      const canvas = canvasRef.current;
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+
+        if (code && code.data && code.data.trim() !== '') {
+          const scannedText = code.data.trim();
+          if (scannedText !== lastScannedCodeRef.current) {
+            lastScannedCodeRef.current = scannedText;
+            handleVerify(scannedText);
+
+            // Debounce same code for 3.5 seconds
+            clearTimeout(scanDebounceTimerRef.current);
+            scanDebounceTimerRef.current = setTimeout(() => {
+              lastScannedCodeRef.current = null;
+            }, 3500);
+          }
+        }
+      }
+    }
+    animFrameRef.current = requestAnimationFrame(scanFrame);
+  };
+
   // Mobile Camera Access Engine
   const startCamera = async () => {
     setCameraError(null);
@@ -141,17 +196,24 @@ export default function MobileScannerPage({ setActivePage }) {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        await videoRef.current.play().catch(() => {});
       }
       setIsScanning(true);
+      
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
       console.warn('Camera stream error:', err);
-      setCameraError('Unable to open mobile camera stream. Please allow camera permissions or use the quick scanner buttons below.');
+      setCameraError('Unable to open camera stream. Please check camera permissions in browser settings.');
       setIsScanning(false);
     }
   };
 
   const stopCamera = () => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
