@@ -72,31 +72,67 @@ export default function MobileScannerPage({ setActivePage }) {
   }, [memberFilter, memberSearch]);
 
   // Image Upload QR Reader Handler
-  const handleFileUpload = (e) => {
+  // Multi-Engine QR Image File & Photo Snap Decoder
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    showToast('Reading Member QR Image...', 'info');
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-        if (code && code.data) {
-          handleVerify(code.data);
-        } else {
-          showToast('No valid QR code detected in uploaded image.', 'error');
+    showToast('Decoding Member QR Image...', 'info');
+
+    let decodedCode = null;
+
+    // 1. Native BarcodeDetector on ImageBitmap (Android Chrome, Edge, modern WebViews)
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        const bitmap = await createImageBitmap(file);
+        const barcodes = await detector.detect(bitmap);
+        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+          decodedCode = barcodes[0].rawValue.trim();
         }
+      } catch (err) {
+        console.warn('BarcodeDetector image file error:', err);
+      }
+    }
+
+    // 2. jsQR Engine Fallback with AttemptBoth & Rescaling for Smartphone Photos
+    if (!decodedCode) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Pass 1: Native size
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0);
+          let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          let code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+
+          // Pass 2: Downscaled max 800px width (for high-megapixel mobile camera photos)
+          if ((!code || !code.data) && (img.width > 800 || img.height > 800)) {
+            const scale = Math.min(800 / img.width, 800 / img.height);
+            canvas.width = Math.floor(img.width * scale);
+            canvas.height = Math.floor(img.height * scale);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+          }
+
+          if (code && code.data && code.data.trim() !== '') {
+            decodedCode = code.data.trim();
+            handleVerify(decodedCode);
+          } else {
+            showToast('No valid QR code detected in uploaded image. Please try taking a closer photo or type Membership ID manually.', 'error');
+          }
+        };
+        img.src = event.target.result;
       };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    } else {
+      handleVerify(decodedCode);
+    }
   };
 
   // Audio & Haptic Feedback Synthesizer
