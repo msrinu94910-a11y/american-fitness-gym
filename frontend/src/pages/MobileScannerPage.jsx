@@ -202,29 +202,68 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Access Engine
+  // Mobile Camera Access Engine with 4-Tier Mobile Fallback
   const startCamera = async () => {
     setCameraError(null);
     setVerificationResult(null);
 
+    const isSecure = typeof window !== 'undefined' && (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera access API is not supported on this browser or context.');
+      const getMedia = navigator.mediaDevices?.getUserMedia || 
+                       navigator.getUserMedia || 
+                       navigator.webkitGetUserMedia || 
+                       navigator.mozGetUserMedia;
+
+      if (!getMedia) {
+        if (!isSecure) {
+          throw new Error('SECURE_CONTEXT_REQUIRED');
+        }
+        throw new Error('CAMERA_API_UNSUPPORTED');
       }
 
-      let stream;
+      let stream = null;
+
+      // 1. Try Mobile Rear Camera (Environment)
       try {
-        // Try rear camera first for mobile devices
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
+        if (navigator.mediaDevices?.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } }
+          });
+        }
+      } catch (e1) {
+        console.warn('Rear camera constraint failed, retrying front camera...', e1);
+      }
+
+      // 2. Try Mobile Front Camera if rear failed
+      if (!stream && navigator.mediaDevices?.getUserMedia) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' }
+          });
+        } catch (e2) {
+          console.warn('Front camera constraint failed, retrying generic video...', e2);
+        }
+      }
+
+      // 3. Try Basic Video Constraint
+      if (!stream && navigator.mediaDevices?.getUserMedia) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (e3) {
+          console.warn('Basic getUserMedia failed, checking legacy API...', e3);
+        }
+      }
+
+      // 4. Legacy getUserMedia Fallback (for older Android WebViews / browsers)
+      if (!stream && getMedia) {
+        stream = await new Promise((resolve, reject) => {
+          getMedia.call(navigator, { video: true }, resolve, reject);
         });
-      } catch (e) {
-        // Fallback to any available camera (front camera / webcam)
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+
+      if (!stream) {
+        throw new Error('CAMERA_STREAM_DENIED');
       }
 
       streamRef.current = stream;
@@ -232,15 +271,28 @@ export default function MobileScannerPage({ setActivePage }) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch((e) => console.warn('Video play error:', e));
       }
       
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
       console.warn('Camera stream error:', err);
-      setCameraError('Unable to open camera stream. Please check camera permissions or use the photo upload button below.');
       setIsScanning(false);
+
+      if (err.message === 'SECURE_CONTEXT_REQUIRED' || (!isSecure && !navigator.mediaDevices)) {
+        setCameraError(
+          '🔒 Mobile Security Notice: Modern iOS Safari & Android Chrome require an HTTPS connection or localhost for live camera stream. Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to snap a picture using your mobile camera!'
+        );
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError(
+          '📷 Camera Permission Denied. Please allow camera permissions in your mobile browser settings or tap "UPLOAD / SNAP PHOTO OF QR CODE" below.'
+        );
+      } else {
+        setCameraError(
+          '⚠️ Unable to start live camera stream. Tap "UPLOAD / SNAP PHOTO OF QR CODE" below to snap a photo with your mobile camera.'
+        );
+      }
     }
   };
 
