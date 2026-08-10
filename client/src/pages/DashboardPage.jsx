@@ -14,6 +14,7 @@ export default function DashboardPage({ setActivePage }) {
   const [activeTab, setActiveTab] = useState('pass'); // 'pass' | 'bookings' | 'profile' | 'metrics'
   const [scanning, setScanning] = useState(false);
   const [turnstileMessage, setTurnstileMessage] = useState(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // Profile Edit State
   const [profileForm, setProfileForm] = useState({
@@ -236,9 +237,16 @@ export default function DashboardPage({ setActivePage }) {
                   </div>
                 )}
                 
-                <div style={{ display: 'inline-block', border: '6px solid #0f172a', borderRadius: '12px', padding: '0.5rem', background: '#ffffff' }}>
-                  <QRCodeSVG value={user.membershipId || user.qrCode || 'AFG-882910'} size={150} />
+                <div style={{ display: 'inline-block', border: '6px solid #0f172a', borderRadius: '12px', padding: '0.5rem', background: '#ffffff', cursor: 'pointer' }} onClick={() => setShowQrModal(true)}>
+                  <QRCodeSVG value={user.membershipId || user.qrCode || 'AFG-882910'} size={160} />
                 </div>
+
+                <button
+                  onClick={() => setShowQrModal(true)}
+                  style={{ display: 'block', margin: '0.75rem auto 0 auto', background: 'rgba(15,23,42,0.08)', border: '1px solid rgba(15,23,42,0.2)', color: '#0f172a', padding: '0.4rem 0.85rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  🔍 Tap to Enlarge Scannable QR Code
+                </button>
 
                 {/* Membership Details */}
                 <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1' }}>
@@ -550,6 +558,79 @@ export default function DashboardPage({ setActivePage }) {
                 {savingProfile ? 'Saving Changes...' : <><Save size={18} /> Save Profile Settings</>}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Fullscreen High-Contrast Mobile QR Code Modal for Admin Scanning */}
+        {showQrModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              background: 'rgba(0, 0, 0, 0.93)',
+              backdropFilter: 'blur(12px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.25rem'
+            }}
+            onClick={() => setShowQrModal(false)}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                color: '#0f172a',
+                padding: '2rem 1.5rem',
+                borderRadius: '24px',
+                textAlign: 'center',
+                maxWidth: '380px',
+                width: '100%',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+                border: '4px solid #f59e0b'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#d97706', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+                AMERICAN FITNESS GYM
+              </div>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0 0 0.2rem 0', color: '#0f172a', fontFamily: 'var(--font-heading)' }}>
+                {user.fullName || 'Alex Morgan'}
+              </h3>
+              <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700, marginBottom: '0.75rem' }}>
+                {user.membershipPlan || 'Pro Athlete VIP'}
+              </div>
+
+              <div style={{ display: 'inline-block', background: '#ffffff', padding: '1rem', border: '5px solid #0f172a', borderRadius: '16px', margin: '0.5rem 0 1rem 0' }}>
+                <QRCodeSVG value={user.membershipId || user.qrCode || 'AFG-882910'} size={210} />
+              </div>
+
+              <div style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '1.25rem', color: '#0f172a', letterSpacing: '0.08em' }}>
+                {user.membershipId || user.qrCode || 'AFG-882910'}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 800, marginTop: '0.35rem' }}>
+                ACTIVE 24/7 MEMBERSHIP PASS ✅
+              </div>
+
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="btn"
+                style={{
+                  width: '100%',
+                  marginTop: '1.25rem',
+                  padding: '0.85rem',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '14px',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Close QR Pass ✕
+              </button>
+            </div>
           </div>
         )}
 
