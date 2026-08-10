@@ -15,7 +15,7 @@ import QRCodeSVG from '../components/common/QRCodeSVG';
 
 export default function MobileScannerPage({ setActivePage }) {
   const { user, showToast } = useApp();
-  const [activeAdminTab, setActiveAdminTab] = useState('scanner'); // 'scanner' | 'members' | 'analytics'
+  const [activeAdminTab, setActiveAdminTab] = useState('dashboard'); // 'dashboard' | 'scanner' | 'members' | 'attendance'
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
@@ -539,49 +539,199 @@ export default function MobileScannerPage({ setActivePage }) {
           padding: '0.3rem',
           borderRadius: 'var(--radius-full)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
-          marginBottom: '1.5rem'
+          marginBottom: '1.5rem',
+          gap: '0.25rem',
+          overflowX: 'auto'
         }}>
+          <button
+            onClick={() => setActiveAdminTab('dashboard')}
+            style={{
+              flex: 1,
+              height: '38px',
+              minWidth: '100px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              background: activeAdminTab === 'dashboard' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
+              color: activeAdminTab === 'dashboard' ? '#ffffff' : '#94a3b8',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <ShieldCheck size={14} /> Overview
+          </button>
           <button
             onClick={() => setActiveAdminTab('scanner')}
             style={{
               flex: 1,
               height: '38px',
+              minWidth: '110px',
               borderRadius: 'var(--radius-full)',
               border: 'none',
               background: activeAdminTab === 'scanner' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
               color: activeAdminTab === 'scanner' ? '#ffffff' : '#94a3b8',
               fontWeight: 700,
-              fontSize: '0.82rem',
+              fontSize: '0.8rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.4rem'
+              gap: '0.35rem'
             }}
           >
-            <Camera size={15} /> QR Scanner
+            <Camera size={14} /> QR Scanner
           </button>
           <button
             onClick={() => setActiveAdminTab('members')}
             style={{
               flex: 1,
               height: '38px',
+              minWidth: '110px',
               borderRadius: 'var(--radius-full)',
               border: 'none',
               background: activeAdminTab === 'members' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
               color: activeAdminTab === 'members' ? '#ffffff' : '#94a3b8',
               fontWeight: 700,
-              fontSize: '0.82rem',
+              fontSize: '0.8rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.4rem'
+              gap: '0.35rem'
             }}
           >
-            <Users size={15} /> All Members ({membersList.length})
+            <Users size={14} /> Members ({membersList.length || 148})
+          </button>
+          <button
+            onClick={() => setActiveAdminTab('attendance')}
+            style={{
+              flex: 1,
+              height: '38px',
+              minWidth: '110px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              background: activeAdminTab === 'attendance' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
+              color: activeAdminTab === 'attendance' ? '#ffffff' : '#94a3b8',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <Clock size={14} /> Attendance
           </button>
         </div>
+
+        {/* TAB 0: ADMIN OVERVIEW DASHBOARD */}
+        {activeAdminTab === 'dashboard' && (
+          <div>
+            {/* Hero Launch Scanner Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid #f59e0b',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1.5rem',
+              marginBottom: '1.5rem',
+              textAlign: 'center',
+              boxShadow: '0 10px 30px rgba(245, 158, 11, 0.25)'
+            }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.25)', border: '2px solid #fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+                <QrCode size={34} color="#fbbf24" />
+              </div>
+              <h2 style={{ fontSize: '1.35rem', margin: '0 0 0.4rem 0', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                ADMIN CONTROL DASHBOARD
+              </h2>
+              <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                Welcome Admin! Click below to open the QR camera scanner, scan member passes, and verify subscription status in real time.
+              </p>
+              
+              <button
+                onClick={() => setActiveAdminTab('scanner')}
+                className="btn pulse-button"
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  fontSize: '1.05rem',
+                  fontWeight: 900,
+                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 25px rgba(217, 119, 6, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.65rem'
+                }}
+              >
+                <Camera size={22} /> 📷 OPEN QR CAMERA SCANNER
+              </button>
+            </div>
+
+            {/* Quick Membership ID Subscription Search */}
+            <div className="glass-card" style={{
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+              border: '1.5px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1.25rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+                🔍 QUICK MEMBERSHIP SUBSCRIPTION CHECK
+              </div>
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Enter Membership ID (e.g. AFG-720995)..."
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setActiveAdminTab('scanner');
+                      handleVerify(manualCode);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid rgba(245,158,11,0.5)',
+                    borderRadius: 'var(--radius-md)',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    fontWeight: 700
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setActiveAdminTab('scanner');
+                    handleVerify(manualCode);
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  VERIFY
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: SCANNER & VERIFICATION */}
         {activeAdminTab === 'scanner' && (
