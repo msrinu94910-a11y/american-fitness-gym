@@ -44,6 +44,10 @@ export default function MobileScannerPage({ setActivePage }) {
   const lastScannedCodeRef = useRef(null);
   const scanDebounceTimerRef = useRef(null);
 
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const isHttpInsecure = typeof window !== 'undefined' && !isHttps && !isLocalhost;
+
   // Load existing attendance log and analytics on mount
   const loadDashboardData = async () => {
     try {
@@ -202,12 +206,22 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Access Engine with 4-Tier Mobile Fallback
+  // Mobile Camera Access Engine with Rear Camera Priority & Context Checks
   const startCamera = async () => {
     setCameraError(null);
     setVerificationResult(null);
 
-    const isSecure = typeof window !== 'undefined' && (window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const isSecureContext = typeof window !== 'undefined' && (window.isSecureContext || isHttps || isLocalhost);
+
+    if (!isSecureContext) {
+      setIsScanning(false);
+      setCameraError(
+        '🔒 Insecure Connection (HTTP): Android Chrome & iPhone Safari require HTTPS or localhost for live camera stream access. Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to scan using your phone camera!'
+      );
+      return;
+    }
 
     try {
       const getMedia = navigator.mediaDevices?.getUserMedia || 
@@ -216,46 +230,54 @@ export default function MobileScannerPage({ setActivePage }) {
                        navigator.mozGetUserMedia;
 
       if (!getMedia) {
-        if (!isSecure) {
-          throw new Error('SECURE_CONTEXT_REQUIRED');
-        }
         throw new Error('CAMERA_API_UNSUPPORTED');
       }
 
       let stream = null;
 
-      // 1. Try Mobile Rear Camera (Environment)
+      // 1. Primary Attempt: Mobile Rear Camera (facingMode exact environment)
       try {
         if (navigator.mediaDevices?.getUserMedia) {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } }
+            video: { facingMode: { exact: 'environment' } }
           });
         }
       } catch (e1) {
-        console.warn('Rear camera constraint failed, retrying front camera...', e1);
+        console.warn('Exact rear camera unavailable, retrying ideal environment...', e1);
       }
 
-      // 2. Try Mobile Front Camera if rear failed
+      // 2. Secondary Attempt: Mobile Rear Camera (facingMode ideal environment)
+      if (!stream && navigator.mediaDevices?.getUserMedia) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } }
+          });
+        } catch (e2) {
+          console.warn('Ideal rear camera constraint failed, retrying front camera...', e2);
+        }
+      }
+
+      // 3. Fallback: Front Camera / Webcam
       if (!stream && navigator.mediaDevices?.getUserMedia) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user' }
           });
-        } catch (e2) {
-          console.warn('Front camera constraint failed, retrying generic video...', e2);
+        } catch (e3) {
+          console.warn('Front camera constraint failed, retrying generic video...', e3);
         }
       }
 
-      // 3. Try Basic Video Constraint
+      // 4. Fallback: Basic Video Constraint
       if (!stream && navigator.mediaDevices?.getUserMedia) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (e3) {
-          console.warn('Basic getUserMedia failed, checking legacy API...', e3);
+        } catch (e4) {
+          console.warn('Basic getUserMedia failed, checking legacy API...', e4);
         }
       }
 
-      // 4. Legacy getUserMedia Fallback (for older Android WebViews / browsers)
+      // 5. Fallback: Legacy getUserMedia API
       if (!stream && getMedia) {
         stream = await new Promise((resolve, reject) => {
           getMedia.call(navigator, { video: true }, resolve, reject);
@@ -280,17 +302,25 @@ export default function MobileScannerPage({ setActivePage }) {
       console.warn('Camera stream error:', err);
       setIsScanning(false);
 
-      if (err.message === 'SECURE_CONTEXT_REQUIRED' || (!isSecure && !navigator.mediaDevices)) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setCameraError(
-          '🔒 Mobile Security Notice: Modern iOS Safari & Android Chrome require an HTTPS connection or localhost for live camera stream. Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to snap a picture using your mobile camera!'
+          '📷 Camera Permission Denied: Please allow camera permissions in your mobile browser settings or tap "UPLOAD / SNAP PHOTO OF QR CODE" below.'
         );
-      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setCameraError(
-          '📷 Camera Permission Denied. Please allow camera permissions in your mobile browser settings or tap "UPLOAD / SNAP PHOTO OF QR CODE" below.'
+          '📷 Camera Hardware Unavailable: No camera hardware was found on your device. Please use the image upload fallback below.'
+        );
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setCameraError(
+          '📷 Camera In Use: Your camera device is currently in use by another application.'
+        );
+      } else if (err.name === 'OverconstrainedError') {
+        setCameraError(
+          '📷 Rear Camera Constraint Error: Unable to bind requested rear camera settings.'
         );
       } else {
         setCameraError(
-          '⚠️ Unable to start live camera stream. Tap "UPLOAD / SNAP PHOTO OF QR CODE" below to snap a photo with your mobile camera.'
+          '⚠️ Unable to start live camera stream. Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to snap a photo with your phone camera.'
         );
       }
     }
@@ -508,6 +538,29 @@ export default function MobileScannerPage({ setActivePage }) {
         {/* TAB 1: SCANNER & VERIFICATION */}
         {activeAdminTab === 'scanner' && (
           <div>
+            {/* HTTP Security Context Warning Banner */}
+            {isHttpInsecure && (
+              <div style={{
+                background: 'rgba(217, 119, 6, 0.18)',
+                border: '1.5px solid #f59e0b',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.9rem 1.1rem',
+                marginBottom: '1.25rem',
+                color: '#fde68a',
+                fontSize: '0.84rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.2)'
+              }}>
+                <AlertTriangle size={24} color="#f59e0b" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: '#ffffff', display: 'block', fontSize: '0.92rem', marginBottom: '0.15rem' }}>🔒 INSECURE CONNECTION (HTTP) DETECTED</strong>
+                  Mobile browsers (Android Chrome & iPhone Safari) restrict live WebRTC camera streaming over plain HTTP. Run on HTTPS or localhost for direct video streaming, or tap <strong>"UPLOAD / SNAP PHOTO OF QR CODE"</strong> below to scan using your mobile phone camera!
+                </div>
+              </div>
+            )}
+
             {/* 1. Dedicated Manual Membership ID Subscription Checker */}
             <div className="glass-card" style={{
               background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
