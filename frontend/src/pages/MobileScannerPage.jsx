@@ -45,6 +45,7 @@ export default function MobileScannerPage({ setActivePage }) {
   const scanDebounceTimerRef = useRef(null);
   const resultCardRef = useRef(null);
   const detectorRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
@@ -277,6 +278,18 @@ export default function MobileScannerPage({ setActivePage }) {
   const handleTurnOnCamera = () => {
     setCameraError(null);
     setVerificationResult(null);
+
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const isSecureContext = typeof window !== 'undefined' && (window.isSecureContext || isHttps || isLocalhost);
+
+    if (!isSecureContext) {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+      return;
+    }
+
     startCamera();
   };
 
@@ -759,6 +772,7 @@ export default function MobileScannerPage({ setActivePage }) {
                       <ImageIcon size={18} color="#fbbf24" />
                       <span>UPLOAD / SNAP PHOTO OF QR CODE</span>
                       <input
+                        ref={fileInputRef}
                         type="file"
                         accept="image/*"
                         capture="environment"
