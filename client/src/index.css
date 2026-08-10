@@ -654,4 +654,19 @@ html {
   animation: scanSuccessPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes textShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.text-shimmer-gold {
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 25%, #ffffff 50%, #fbbf24 75%, #f59e0b 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textShimmer 4s linear infinite;
+}
+
+
 
