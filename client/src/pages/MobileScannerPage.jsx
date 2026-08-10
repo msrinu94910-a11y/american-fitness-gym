@@ -273,22 +273,10 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Launcher Handler (Synchronous for Mobile Browser Security)
+  // Mobile Camera Launcher Handler - Directly starts live WebRTC video stream
   const handleTurnOnCamera = () => {
     setCameraError(null);
     setVerificationResult(null);
-
-    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-    if (!isHttps && !isLocalhost) {
-      showToast('📷 Opening smartphone camera...', 'info');
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-      return;
-    }
-
     startCamera();
   };
 
