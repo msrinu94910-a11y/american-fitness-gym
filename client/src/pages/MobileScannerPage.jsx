@@ -281,12 +281,12 @@ export default function MobileScannerPage({ setActivePage }) {
 
     const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const isSecureContext = typeof window !== 'undefined' && (window.isSecureContext || isHttps || isLocalhost);
 
-    if (!isSecureContext) {
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
+    if (!isHttps && !isLocalhost) {
+      showToast('🔄 Redirecting to secure connection (HTTPS) for live scanner...', 'info');
+      setTimeout(() => {
+        window.location.href = window.location.href.replace('http:', 'https:');
+      }, 800);
       return;
     }
 
