@@ -3,15 +3,23 @@ import {
   Flame, Dumbbell, ShieldCheck, Trophy, Users, Clock, ArrowRight, Star, 
   Zap, CheckCircle2, HeartPulse, Sparkles, Award, Lock, Target,
   ChevronDown, ChevronUp, Calendar, Activity, Compass, Check, Play,
-  QrCode, ArrowUpRight, ChevronRight, PhoneCall, RefreshCw
+  QrCode, ArrowUpRight, ChevronRight, PhoneCall, RefreshCw, Calculator,
+  Layers, MapPin, Eye, Volume2, Shield
 } from 'lucide-react';
 
 export default function HomePage({ setActivePage }) {
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'annual'
   const [selectedDay, setSelectedDay] = useState('Mon');
+  const [selectedZone, setSelectedZone] = useState('powerlifting');
   const [activeFaq, setActiveFaq] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const heroTiltRef = useRef(null);
+
+  // BMI & Macro Calculator State
+  const [calcHeight, setCalcHeight] = useState(175); // cm
+  const [calcWeight, setCalcWeight] = useState(75); // kg
+  const [calcGoal, setCalcGoal] = useState('muscle'); // 'muscle' | 'fatloss' | 'stamina'
+  const [calcResult, setCalcResult] = useState(null);
 
   // 3D Mouse Tilt Effect for Hero Card
   const handleMouseMove = (e) => {
@@ -62,8 +70,67 @@ export default function HomePage({ setActivePage }) {
     };
   }, []);
 
+  // Calculate BMI & Macros
+  const calculateFitnessPlan = () => {
+    const heightM = calcHeight / 100;
+    const bmi = (calcWeight / (heightM * heightM)).toFixed(1);
+    
+    let calories = 2200;
+    let protein = 150;
+    let planName = 'Pro Athlete VIP';
+
+    if (calcGoal === 'muscle') {
+      calories = Math.round(calcWeight * 33 + 400);
+      protein = Math.round(calcWeight * 2.2);
+      planName = 'Pro Athlete VIP';
+    } else if (calcGoal === 'fatloss') {
+      calories = Math.round(calcWeight * 26 - 350);
+      protein = Math.round(calcWeight * 2.4);
+      planName = 'Pro Athlete VIP';
+    } else {
+      calories = Math.round(calcWeight * 30);
+      protein = Math.round(calcWeight * 2.0);
+      planName = 'Executive Elite';
+    }
+
+    setCalcResult({
+      bmi,
+      calories,
+      protein,
+      planName
+    });
+  };
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Gym Zones Showcase Data
+  const facilityZones = {
+    powerlifting: {
+      name: 'Olympic Powerlifting Arena',
+      desc: '12 Rogue Monster power racks, competition Eleiko barbells, rubber bumper plates up to 150 lbs, and deadlift platforms with bar-path sensors.',
+      image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=80',
+      specs: ['12 Rogue Monster Racks', 'Competition Eleiko Bars', 'Deadlift Platforms', 'Calibrated Steel Plates']
+    },
+    boxing: {
+      name: 'Group HIIT & Combat Ring',
+      desc: 'High-intensity cardiovascular conditioning, spin arena, heavy boxing bags, and metabolic fat-burn group workouts led by champion boxers.',
+      image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1000&q=80',
+      specs: ['Full-Size Boxing Ring', '16 Heavy Punching Bags', 'Concept2 Rowers/SkiErgs', 'Live Heart-Rate Displays']
+    },
+    recovery: {
+      name: 'Infrared Cryotherapy & Spa Suite',
+      desc: 'Infrared saunas, cold plunge recovery pools, and HydroMassage therapy beds for rapid muscle repair and zero post-workout soreness.',
+      image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
+      specs: ['Infrared Dry Saunas', '52°F Cold Plunge Pools', 'HydroMassage Lounge', 'Locker Towel Service']
+    },
+    smartkey: {
+      name: '24/7 Digital Gate & QR Scanner',
+      desc: 'Instant gate entry using your smartphone QR code with automated attendance logging and zero waiting at turnstiles.',
+      image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1000&q=80',
+      specs: ['24/7/365 Gate Access', 'Instant QR Mobile Pass', 'Real-time Attendance Logs', 'High-Security Encryption']
+    }
   };
 
   // Facility Features
@@ -281,36 +348,37 @@ export default function HomePage({ setActivePage }) {
       <div className="antigravity-hero-bg" />
       <div className="antigravity-hero-bg-2" />
 
-      {/* SECTION 1: HERO BANNER */}
-      <section className="section-padding hero-section" style={{ paddingTop: '5rem', paddingBottom: '4rem', position: 'relative' }}>
+      {/* SECTION 1: HERO BANNER WITH 3D TILT & LIVE TICKER */}
+      <section className="section-padding hero-section" style={{ paddingTop: '5rem', paddingBottom: '3.5rem', position: 'relative' }}>
         <div className="container">
+          
+          {/* Live Check-In Ticker Ribbon */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.4rem 1.1rem',
+            background: 'rgba(15, 23, 42, 0.85)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: 'var(--radius-full)',
+            color: '#fbbf24',
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            marginBottom: '1.5rem',
+            boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
+            maxWidth: '100%',
+            overflow: 'hidden'
+          }}>
+            <span className="pulse-beacon" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+            <span style={{ color: '#6ee7b7' }}>LIVE TICKER:</span>
+            <span style={{ color: '#ffffff', fontWeight: 600 }}>🟢 Member Alex M. checked in at Main Gate • 🟢 Sarah J. booked HIIT Blast</span>
+          </div>
+
           <div className="grid grid-2" style={{ alignItems: 'center', gap: '3rem' }}>
             
             {/* Hero Left Content */}
             <div className="scroll-reveal ag-entrance ag-delay-1">
-              <div 
-                className="floating-element"
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '0.6rem', 
-                  padding: '0.45rem 1.1rem', 
-                  background: 'rgba(245, 158, 11, 0.12)', 
-                  border: '1px solid rgba(245, 158, 11, 0.4)', 
-                  borderRadius: 'var(--radius-full)', 
-                  color: '#fbbf24', 
-                  fontSize: '0.82rem', 
-                  fontWeight: 800, 
-                  letterSpacing: '0.06em', 
-                  marginBottom: '1.25rem',
-                  boxShadow: '0 0 20px rgba(245, 158, 11, 0.2)'
-                }}
-              >
-                <span className="pulse-beacon" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', boxShadow: '0 0 10px #f59e0b' }} />
-                <span>24/7 ULTRA-MODERN FITNESS ARENA • NOW OPEN</span>
-              </div>
-
-              <h1 style={{ fontSize: 'clamp(2.4rem, 5vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, fontFamily: 'var(--font-heading)', margin: '0 0 1.25rem 0', color: '#ffffff' }}>
+              <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, lineHeight: 1.1, fontFamily: 'var(--font-heading)', margin: '0 0 1.25rem 0', color: '#ffffff' }}>
                 BUILD YOUR LEGACY. <br />
                 <span style={{ 
                   background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #38bdf8 100%)', 
@@ -444,70 +512,203 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 2: FACILITY FEATURES & AMENITIES */}
-      <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.6)', borderTop: '1px solid var(--border-glass)' }}>
+      {/* SECTION 2: INTERACTIVE 3D GYM ZONE TOUR SHOWCASE */}
+      <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.8)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
-          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 3rem auto' }}>
+          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 2.5rem auto' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              WORLD-CLASS AMENITIES
+              VIRTUAL FACILITY SHOWCASE
             </span>
             <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              DESIGNED FOR UNCOMPROMISING ATHLETES
+              EXPLORE OUR 20,000 SQ FT ARENA ZONES
             </h2>
             <p style={{ color: '#94a3b8', fontSize: '0.98rem' }}>
-              Everything you need to sculpt your ideal physique, break personal records, and recover faster.
+              Tap any facility zone below to inspect specifications, equipment, and recovery amenities.
             </p>
           </div>
 
-          <div className="grid grid-3" style={{ gap: '1.5rem' }}>
-            {features.map((feat, idx) => {
-              const IconComp = feat.icon;
-              return (
-                <div 
-                  key={idx}
-                  className="glass-card scroll-reveal" 
-                  style={{ 
-                    padding: '2rem', 
-                    borderRadius: 'var(--radius-lg)', 
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    transition: 'transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-6px)';
-                    e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.6)';
-                    e.currentTarget.style.boxShadow = '0 15px 35px rgba(245, 158, 11, 0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <IconComp size={24} color="#f59e0b" />
-                    </div>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.55rem', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', color: '#cbd5e1', letterSpacing: '0.06em' }}>
-                      {feat.badge}
-                    </span>
-                  </div>
+          {/* Zone Selector Buttons */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+            {Object.keys(facilityZones).map((zoneKey) => (
+              <button
+                key={zoneKey}
+                onClick={() => setSelectedZone(zoneKey)}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: selectedZone === zoneKey ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
+                  background: selectedZone === zoneKey ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'rgba(15,23,42,0.6)',
+                  color: selectedZone === zoneKey ? '#ffffff' : '#94a3b8',
+                  fontSize: '0.88rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)'
+                }}
+              >
+                {facilityZones[zoneKey].name}
+              </button>
+            ))}
+          </div>
 
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.65rem', fontFamily: 'var(--font-heading)' }}>
-                    {feat.title}
-                  </h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-                    {feat.desc}
-                  </p>
+          {/* Zone Feature Showcase Display */}
+          <div className="glass-card scroll-reveal" style={{
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            border: '2px solid rgba(245, 158, 11, 0.4)',
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%)'
+          }}>
+            <div className="grid grid-2" style={{ alignItems: 'center', gap: '2rem' }}>
+              <img 
+                src={facilityZones[selectedZone].image}
+                alt={facilityZones[selectedZone].name}
+                style={{ width: '100%', height: '320px', objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.15)' }}
+              />
+
+              <div>
+                <span className="badge badge-gold" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                  FEATURED ARENA ZONE
+                </span>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)', margin: '0.2rem 0 0.85rem 0' }}>
+                  {facilityZones[selectedZone].name}
+                </h3>
+                <p style={{ color: '#cbd5e1', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                  {facilityZones[selectedZone].desc}
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  {facilityZones[selectedZone].specs.map((spec, sIdx) => (
+                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a7f3d0', fontSize: '0.85rem', fontWeight: 700 }}>
+                      <CheckCircle2 size={16} color="#10b981" /> {spec}
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
+
+                <button
+                  onClick={() => setActivePage('register')}
+                  className="btn btn-primary"
+                  style={{ padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: 800 }}
+                >
+                  <Eye size={18} /> Schedule In-Person VIP Tour
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* SECTION 3: INTERACTIVE BMI & MACRO CALCULATOR */}
+      <section className="section-padding" style={{ position: 'relative' }}>
+        <div className="container" style={{ maxWidth: '900px' }}>
+          <div className="glass-card scroll-reveal" style={{
+            padding: '2.5rem',
+            borderRadius: 'var(--radius-lg)',
+            border: '2px solid #38bdf8',
+            background: 'linear-gradient(145deg, rgba(14, 116, 144, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            boxShadow: '0 15px 40px rgba(56, 189, 248, 0.15)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.9rem', background: 'rgba(56, 189, 248, 0.15)', borderRadius: 'var(--radius-full)', color: '#38bdf8', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+                <Calculator size={16} /> PEAK PERFORMANCE CALCULATOR
+              </div>
+              <h2 style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: '#ffffff', margin: 0 }}>
+                CALCULATE YOUR DAILY MACROS & PLAN
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.35rem' }}>
+                Enter your height, weight, and fitness goal to generate instant personalized daily target calories & macros.
+              </p>
+            </div>
+
+            <div className="grid grid-3" style={{ gap: '1.25rem', marginBottom: '1.75rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                  HEIGHT ({calcHeight} cm)
+                </label>
+                <input 
+                  type="range" 
+                  min="140" 
+                  max="210" 
+                  value={calcHeight} 
+                  onChange={(e) => setCalcHeight(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#38bdf8' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                  WEIGHT ({calcWeight} kg)
+                </label>
+                <input 
+                  type="range" 
+                  min="40" 
+                  max="140" 
+                  value={calcWeight} 
+                  onChange={(e) => setCalcWeight(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#38bdf8' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                  PRIMARY GOAL
+                </label>
+                <select
+                  value={calcGoal}
+                  onChange={(e) => setCalcGoal(e.target.value)}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', fontWeight: 700 }}
+                >
+                  <option value="muscle">Muscle Hypertrophy & Strength</option>
+                  <option value="fatloss">Rapid Fat Loss & Toning</option>
+                  <option value="stamina">Athletic Stamina & Endurance</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              onClick={calculateFitnessPlan}
+              className="btn pulse-button"
+              style={{
+                width: '100%',
+                padding: '0.9rem',
+                fontSize: '0.95rem',
+                fontWeight: 900,
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(2, 132, 199, 0.4)'
+              }}
+            >
+              <Zap size={18} /> GENERATE MY PEAK FITNESS MACROS
+            </button>
+
+            {calcResult && (
+              <div style={{ marginTop: '1.75rem', padding: '1.5rem', background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(56, 189, 248, 0.4)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', textAlign: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>BMI SCORE</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#38bdf8' }}>{calcResult.bmi}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>DAILY CALORIES TARGET</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fbbf24' }}>{calcResult.calories} kcal</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>DAILY PROTEIN GOAL</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#10b981' }}>{calcResult.protein}g</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>RECOMMENDED MEMBERSHIP</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ffffff', marginTop: '0.35rem' }}>{calcResult.planName}</div>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </section>
 
-      {/* SECTION 3: INTERACTIVE MEMBERSHIP PRICING */}
+      {/* SECTION 4: INTERACTIVE MEMBERSHIP PRICING */}
       <section className="section-padding" style={{ position: 'relative' }}>
         <div className="container">
           <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 2.5rem auto' }}>
@@ -634,7 +835,7 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 4: LIVE CLASS SCHEDULE MATRIX */}
+      {/* SECTION 5: LIVE CLASS SCHEDULE MATRIX */}
       <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.7)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
           <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 2rem auto' }}>
@@ -729,7 +930,7 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 5: MASTER TRAINERS */}
+      {/* SECTION 6: MASTER TRAINERS */}
       <section className="section-padding" style={{ position: 'relative' }}>
         <div className="container">
           <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 3rem auto' }}>
@@ -781,7 +982,7 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 6: CLIENT TRANSFORMATIONS & REVIEWS */}
+      {/* SECTION 7: CLIENT TRANSFORMATIONS & REVIEWS */}
       <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.7)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
           <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 3rem auto' }}>
@@ -847,7 +1048,7 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 7: FAQ ACCORDION */}
+      {/* SECTION 8: FAQ ACCORDION */}
       <section className="section-padding">
         <div className="container" style={{ maxWidth: '800px' }}>
           <div className="text-center scroll-reveal" style={{ marginBottom: '2.5rem' }}>
@@ -903,7 +1104,7 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 8: FULL-WIDTH CTA FOOTER BANNER */}
+      {/* SECTION 9: FULL-WIDTH CTA FOOTER BANNER */}
       <section className="section-padding" style={{ paddingBottom: '5rem' }}>
         <div className="container">
           <div className="glass-card scroll-reveal" style={{
