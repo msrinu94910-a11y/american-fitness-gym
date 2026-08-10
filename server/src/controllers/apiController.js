@@ -552,10 +552,9 @@ const verifyMembershipQR = (req, res) => {
 // Admin: Verify Member QR Code or Membership ID
 const verifyQR = (req, res) => {
   const payload = req.body || {};
-  const rawCode = (payload.qrCode || payload.membershipId || payload.code || '').toString().trim();
-  const code = rawCode.toUpperCase();
+  let rawCode = (payload.qrCode || payload.membershipId || payload.code || '').toString().trim();
 
-  if (!code) {
+  if (!rawCode) {
     return res.status(400).json({
       success: false,
       status: 'INVALID',
@@ -564,10 +563,28 @@ const verifyQR = (req, res) => {
     });
   }
 
+  // 1. Try parsing JSON if rawCode starts with '{'
+  if (rawCode.startsWith('{') && rawCode.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(rawCode);
+      rawCode = parsed.membershipId || parsed.qrCode || parsed.id || parsed.code || rawCode;
+    } catch (e) {}
+  }
+
+  // 2. Extract query param if rawCode contains URL
+  if (rawCode.includes('?')) {
+    try {
+      const urlObj = new URL(rawCode, 'http://localhost');
+      const param = urlObj.searchParams.get('membershipId') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code');
+      if (param) rawCode = param;
+    } catch (e) {}
+  }
+
+  const code = rawCode.toUpperCase();
   const cleanCode = code.replace(/[^A-Z0-9]/g, '');
 
-  // Find matching user in store
-  const foundUser = store.users.find(u => {
+  // 3. Find matching user in store
+  let foundUser = store.users.find(u => {
     const uQr = (u.qrCode || '').toUpperCase();
     const uMem = (u.membershipId || '').toUpperCase();
     const uId = (u.id || '').toUpperCase();
@@ -599,7 +616,7 @@ const verifyQR = (req, res) => {
         id: foundUser ? foundUser.id : 'usr_demo_2',
         fullName: foundUser ? foundUser.fullName : 'Marcus Brody',
         email: foundUser ? foundUser.email : 'marcus.brody@example.com',
-        membershipId: foundUser ? (foundUser.qrCode || foundUser.id) : 'AFG-EXPIRED-99',
+        membershipId: foundUser ? (foundUser.membershipId || foundUser.qrCode || foundUser.id) : 'AFG-EXPIRED-99',
         membershipPlan: foundUser ? (foundUser.membershipPlan || 'Basic Gym Access') : 'Basic Gym Access',
         expiryDate: foundUser ? (foundUser.expiryDate || '2025-01-15') : '2025-01-15',
         daysRemaining: 0,
@@ -609,7 +626,7 @@ const verifyQR = (req, res) => {
     });
   }
 
-  // Check if explicit invalid code or user not found
+  // Check if explicit invalid test code
   if (code.includes('INVALID') || code === 'FAKE-QR-0000') {
     return res.json({
       success: false,
@@ -619,11 +636,28 @@ const verifyQR = (req, res) => {
     });
   }
 
-  const memberName = foundUser ? foundUser.fullName : 'Alex Morgan';
-  const memberId = foundUser ? (foundUser.qrCode || foundUser.id) : (code || 'AFG-882910');
-  const plan = foundUser ? (foundUser.membershipPlan || 'Pro Athlete') : 'Pro Athlete';
-  const email = foundUser ? foundUser.email : 'alex.morgan@example.com';
-  const expiryDate = foundUser ? (foundUser.expiryDate || '2027-12-31') : '2027-12-31';
+  // If no user pre-seeded, dynamically create a valid member record for the scanned code
+  if (!foundUser) {
+    const memId = code.startsWith('AFG') ? code : `AFG-${cleanCode || Math.floor(100000 + Math.random() * 900000)}`;
+    foundUser = {
+      id: 'usr_' + Date.now(),
+      fullName: 'Jaan (Verified Member)',
+      email: 'member@americanfitness.com',
+      membershipId: memId,
+      qrCode: memId,
+      membershipPlan: 'Pro Athlete VIP',
+      status: 'ACTIVE_MEMBER',
+      joinedDate: '2026-01-01',
+      expiryDate: '2027-12-31'
+    };
+    store.users.push(foundUser);
+  }
+
+  const memberName = foundUser.fullName || 'Jaan';
+  const memberId = foundUser.membershipId || foundUser.qrCode || code || 'AFG-720995';
+  const plan = foundUser.membershipPlan || 'Pro Athlete VIP';
+  const email = foundUser.email || 'member@americanfitness.com';
+  const expiryDate = foundUser.expiryDate || '2027-12-31';
 
   // Calculate dynamic days remaining
   const expTime = new Date(expiryDate).getTime();
@@ -652,9 +686,9 @@ const verifyQR = (req, res) => {
     success: true,
     hasSubscription: true,
     status: 'ACTIVE',
-    message: `ACTIVE SUBSCRIPTION VERIFIED ✅ ${memberName} has an active ${plan} subscription!`,
+    message: `ACTIVE MEMBERSHIP CONFIRMED ✅ Welcome, ${memberName}! Attendance entry logged.`,
     member: {
-      id: foundUser ? foundUser.id : 'usr_demo_1',
+      id: foundUser.id,
       fullName: memberName,
       email,
       membershipId: memberId,
@@ -662,7 +696,9 @@ const verifyQR = (req, res) => {
       expiryDate,
       daysRemaining,
       status: 'ACTIVE',
-      hasActiveSubscription: true
+      hasActiveSubscription: true,
+      joinedDate: foundUser.joinedDate || '2026-01-01',
+      photo: foundUser.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
     },
     attendance: attendanceRecord
   });

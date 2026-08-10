@@ -43,6 +43,7 @@ export default function MobileScannerPage({ setActivePage }) {
   const canvasRef = useRef(typeof document !== 'undefined' ? document.createElement('canvas') : null);
   const lastScannedCodeRef = useRef(null);
   const scanDebounceTimerRef = useRef(null);
+  const resultCardRef = useRef(null);
 
   const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
   const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -401,12 +402,18 @@ export default function MobileScannerPage({ setActivePage }) {
       triggerAudioFeedback(res.status);
 
       if (res.status === 'ACTIVE') {
-        showToast(`✅ ACTIVE MEMBERSHIP: ${res.member.fullName} Checked In!`, 'success');
+        showToast(`✅ ACTIVE MEMBERSHIP CONFIRMED: ${res.member?.fullName || 'Member'} Verified!`, 'success');
         loadAttendanceHistory();
+        setTimeout(() => {
+          resultCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
       } else if (res.status === 'EXPIRED') {
-        showToast(`❌ EXPIRED MEMBERSHIP: ${res.member.fullName}`, 'error');
+        showToast(`❌ EXPIRED MEMBERSHIP: ${res.member?.fullName || 'Member'}`, 'error');
+        setTimeout(() => {
+          resultCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
       } else {
-        showToast('⚠️ Invalid Membership QR Code', 'error');
+        showToast('⚠️ Unregistered Membership QR Code', 'error');
       }
     } catch (err) {
       setIsLoading(false);
@@ -827,7 +834,7 @@ export default function MobileScannerPage({ setActivePage }) {
             )}
 
             {verificationResult && !isLoading && (
-              <div className="scan-result-card glass-card" style={{
+              <div ref={resultCardRef} className="scan-result-card glass-card" style={{
                 background: verificationResult.status === 'ACTIVE'
                   ? 'linear-gradient(145deg, rgba(6, 78, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)'
                   : verificationResult.status === 'EXPIRED'
@@ -855,7 +862,7 @@ export default function MobileScannerPage({ setActivePage }) {
                         <CheckCircle2 size={30} color="#ffffff" />
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6ee7b7', fontWeight: 800 }}>VERIFICATION SUCCESS</div>
+                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6ee7b7', fontWeight: 800 }}>MEMBERSHIP ACCESS GRANTED & VERIFIED</div>
                         <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>ACTIVE MEMBERSHIP ✅</h3>
                       </div>
                     </div>
@@ -877,7 +884,7 @@ export default function MobileScannerPage({ setActivePage }) {
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION STATUS</span>
-                          <strong style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>ACTIVE HAS MEMBERSHIP</strong>
+                          <strong style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>ACTIVE HAS SUBSCRIPTION</strong>
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION PLAN</span>
@@ -894,9 +901,53 @@ export default function MobileScannerPage({ setActivePage }) {
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#a7f3d0', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#a7f3d0', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1.25rem' }}>
                       <Clock size={16} color="#10b981" />
                       <span>Attendance Checked In Automatically at {verificationResult.attendance?.time || 'Just Now'}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => {
+                          setVerificationResult(null);
+                          startCamera();
+                        }}
+                        className="btn pulse-button"
+                        style={{
+                          flex: 1,
+                          minWidth: '200px',
+                          padding: '0.9rem',
+                          fontSize: '0.95rem',
+                          fontWeight: 900,
+                          background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 15px rgba(217,119,6,0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <Camera size={18} /> SCAN NEXT MEMBER QR CODE
+                      </button>
+                      <button
+                        onClick={() => setActiveAdminTab('attendance')}
+                        style={{
+                          padding: '0.9rem 1.25rem',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: 'var(--radius-md)',
+                          color: '#ffffff',
+                          fontSize: '0.88rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📋 View Attendance Logs
+                      </button>
                     </div>
                   </div>
                 )}
