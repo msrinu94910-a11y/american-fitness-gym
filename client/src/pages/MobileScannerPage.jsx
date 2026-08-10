@@ -45,9 +45,10 @@ export default function MobileScannerPage({ setActivePage }) {
   const scanDebounceTimerRef = useRef(null);
   const resultCardRef = useRef(null);
 
+  const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const isHttpInsecure = typeof window !== 'undefined' && !isHttps && !isLocalhost;
+  const isLocalIp = /^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^127\.|^localhost|\.local$/.test(host);
+  const isHttpInsecure = typeof window !== 'undefined' && !isHttps && !isLocalIp;
 
   // Load existing attendance log and analytics on mount
   const loadDashboardData = async () => {
@@ -248,14 +249,15 @@ export default function MobileScannerPage({ setActivePage }) {
     setCameraError(null);
     setVerificationResult(null);
 
+    const hostName = typeof window !== 'undefined' ? window.location.hostname : '';
     const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const isSecureContext = typeof window !== 'undefined' && (window.isSecureContext || isHttps || isLocalhost);
+    const isLocalSubnet = /^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^127\.|^localhost|\.local$/.test(hostName);
+    const isSecureContext = typeof window !== 'undefined' && (window.isSecureContext || isHttps || isLocalSubnet);
 
     if (!isSecureContext) {
       setIsScanning(false);
       setCameraError(
-        '🔒 Insecure Connection (HTTP): Android Chrome & iPhone Safari require HTTPS or localhost for live camera stream access. Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to scan using your phone camera!'
+        '🔒 Insecure Remote Connection: Mobile Chrome & Safari require HTTPS or local network WiFi access (http://192.168.x.x:5173). Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to scan using your phone camera!'
       );
       return;
     }
