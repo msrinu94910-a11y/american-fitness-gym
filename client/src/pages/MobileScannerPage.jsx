@@ -194,6 +194,14 @@ export default function MobileScannerPage({ setActivePage }) {
     animFrameRef.current = requestAnimationFrame(scanFrame);
   };
 
+  // Ensure video element receives camera stream when mounted
+  useEffect(() => {
+    if (isScanning && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch((err) => console.warn('Video play error:', err));
+    }
+  }, [isScanning]);
+
   // Mobile Camera Access Engine
   const startCamera = async () => {
     setCameraError(null);
@@ -220,11 +228,12 @@ export default function MobileScannerPage({ setActivePage }) {
       }
 
       streamRef.current = stream;
+      setIsScanning(true);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
       }
-      setIsScanning(true);
       
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(scanFrame);
