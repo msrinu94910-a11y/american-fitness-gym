@@ -267,9 +267,9 @@ export default function MobileScannerPage({ setActivePage }) {
 
   // Ensure video element receives camera stream when mounted
   useEffect(() => {
-    if (isScanning && videoRef.current && streamRef.current) {
+    if (isScanning && videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch((err) => console.warn('Video play error:', err));
+      videoRef.current.play().catch(() => {});
     }
   }, [isScanning]);
 
@@ -286,8 +286,10 @@ export default function MobileScannerPage({ setActivePage }) {
     if (!isSecureContext) {
       setIsScanning(false);
       setCameraError(
-        '🔒 Insecure Remote Connection: Mobile Chrome & Safari require HTTPS or local network WiFi access (http://192.168.x.x:5173). Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to scan using your phone camera!'
+        '🔒 Insecure Connection (HTTP): Mobile Chrome & Safari require HTTPS or local network access (https://192.168.1.3:5173). Launching native mobile camera...'
       );
+      // Auto-trigger native mobile camera snapshot
+      setTimeout(() => fileInputRef.current?.click(), 300);
       return;
     }
 
@@ -303,53 +305,38 @@ export default function MobileScannerPage({ setActivePage }) {
 
       let stream = null;
 
-      // 1. Primary Attempt: Mobile Rear Camera (facingMode exact environment)
+      // 1. Primary Attempt: Rear Camera (facingMode ideal environment)
       try {
         if (navigator.mediaDevices?.getUserMedia) {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: 'environment' } }
-          });
-        }
-      } catch (e1) {
-        console.warn('Exact rear camera unavailable, retrying ideal environment...', e1);
-      }
-
-      // 2. Secondary Attempt: Mobile Rear Camera (facingMode ideal environment)
-      if (!stream && navigator.mediaDevices?.getUserMedia) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: 'environment' } }
           });
-        } catch (e2) {
-          console.warn('Ideal rear camera constraint failed, retrying front camera...', e2);
         }
-      }
+      } catch (e1) {}
 
-      // 3. Fallback: Front Camera / Webcam
+      // 2. Fallback: Front Camera / Webcam
       if (!stream && navigator.mediaDevices?.getUserMedia) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user' }
           });
-        } catch (e3) {
-          console.warn('Front camera constraint failed, retrying generic video...', e3);
-        }
+        } catch (e2) {}
       }
 
-      // 4. Fallback: Basic Video Constraint
+      // 3. Fallback: Basic Video Constraint
       if (!stream && navigator.mediaDevices?.getUserMedia) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (e4) {
-          console.warn('Basic getUserMedia failed, checking legacy API...', e4);
-        }
+        } catch (e3) {}
       }
 
-      // 5. Fallback: Legacy getUserMedia API
+      // 4. Fallback: Legacy getUserMedia API
       if (!stream && getMedia) {
-        stream = await new Promise((resolve, reject) => {
-          getMedia.call(navigator, { video: true }, resolve, reject);
-        });
+        try {
+          stream = await new Promise((resolve, reject) => {
+            getMedia.call(navigator, { video: true }, resolve, reject);
+          });
+        } catch (e4) {}
       }
 
       if (!stream) {
@@ -361,14 +348,12 @@ export default function MobileScannerPage({ setActivePage }) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch((e) => console.warn('Video play error:', e));
+        videoRef.current.play().catch(() => {});
       }
       
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
-      console.warn('Camera stream error:', err);
-      setIsScanning(false);
 
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setCameraError(
