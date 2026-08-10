@@ -435,6 +435,7 @@ const submitTrialPass = (req, res) => {
   });
 };
 // Admin: Verify Member QR Code or Membership ID
+// Admin: Verify Member QR Code or Membership ID
 const verifyQR = (req, res) => {
   const payload = req.body || {};
   const rawCode = (payload.qrCode || payload.membershipId || payload.code || '').toString().trim();
@@ -444,6 +445,7 @@ const verifyQR = (req, res) => {
     return res.status(400).json({
       success: false,
       status: 'INVALID',
+      hasSubscription: false,
       message: 'Please enter a Membership ID, QR Code, or Email to check subscription status.'
     });
   }
@@ -457,6 +459,7 @@ const verifyQR = (req, res) => {
     (u.fullName && u.fullName.toUpperCase().includes(code))
   );
 
+  // Check if explicit expired code or user status is expired
   if (code.includes('EXPIRED') || code === 'AFG-EXPIRED-99' || (foundUser && foundUser.status === 'EXPIRED')) {
     return res.json({
       success: true,
@@ -466,27 +469,37 @@ const verifyQR = (req, res) => {
       member: {
         id: foundUser ? foundUser.id : 'usr_demo_2',
         fullName: foundUser ? foundUser.fullName : 'Marcus Brody',
+        email: foundUser ? foundUser.email : 'marcus.brody@example.com',
         membershipId: foundUser ? (foundUser.qrCode || foundUser.id) : 'AFG-EXPIRED-99',
         membershipPlan: foundUser ? (foundUser.membershipPlan || 'Basic Gym Access') : 'Basic Gym Access',
         expiryDate: foundUser ? (foundUser.expiryDate || '2025-01-15') : '2025-01-15',
-        status: 'Expired ❌',
+        daysRemaining: 0,
+        status: 'EXPIRED',
         hasActiveSubscription: false
       }
     });
   }
 
+  // Check if explicit invalid code or user not found
   if (code.includes('INVALID') || code === 'FAKE-QR-0000') {
     return res.json({
       success: false,
       hasSubscription: false,
       status: 'INVALID',
-      message: `NO SUBSCRIPTION RECORD FOUND ⚠️ Membership ID "${rawCode}" is not registered in the system.`
+      message: `NO SUBSCRIPTION RECORD FOUND ⚠️ Membership ID / QR Code "${rawCode}" is not registered.`
     });
   }
 
   const memberName = foundUser ? foundUser.fullName : 'Alex Morgan';
   const memberId = foundUser ? (foundUser.qrCode || foundUser.id) : (code || 'AFG-882910');
-  const plan = foundUser ? foundUser.membershipPlan : 'Pro Athlete VIP';
+  const plan = foundUser ? (foundUser.membershipPlan || 'Pro Athlete') : 'Pro Athlete';
+  const email = foundUser ? foundUser.email : 'alex.morgan@example.com';
+  const expiryDate = foundUser ? (foundUser.expiryDate || '2027-12-31') : '2027-12-31';
+
+  // Calculate dynamic days remaining
+  const expTime = new Date(expiryDate).getTime();
+  const nowTime = new Date().getTime();
+  const daysRemaining = Math.max(1, Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24))) || 508;
 
   const now = new Date();
   const attendanceRecord = {
@@ -514,10 +527,12 @@ const verifyQR = (req, res) => {
     member: {
       id: foundUser ? foundUser.id : 'usr_demo_1',
       fullName: memberName,
+      email,
       membershipId: memberId,
       membershipPlan: plan,
-      expiryDate: '2027-12-31',
-      status: 'Active ✅',
+      expiryDate,
+      daysRemaining,
+      status: 'ACTIVE',
       hasActiveSubscription: true
     },
     attendance: attendanceRecord

@@ -678,127 +678,140 @@ export default function MobileScannerPage({ setActivePage }) {
             {verificationResult && !isLoading && (
               <div className="scan-result-card glass-card" style={{
                 background: verificationResult.status === 'ACTIVE'
-                  ? 'linear-gradient(145deg, rgba(6, 78, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)'
+                  ? 'linear-gradient(145deg, rgba(6, 78, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)'
                   : verificationResult.status === 'EXPIRED'
-                    ? 'linear-gradient(145deg, rgba(127, 29, 29, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)'
-                    : 'linear-gradient(145deg, rgba(120, 53, 15, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                    ? 'linear-gradient(145deg, rgba(127, 29, 29, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)'
+                    : 'linear-gradient(145deg, rgba(120, 53, 15, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
                 border: verificationResult.status === 'ACTIVE'
                   ? '2px solid #10b981'
                   : verificationResult.status === 'EXPIRED'
                     ? '2px solid #ef4444'
                     : '2px solid #f59e0b',
                 borderRadius: 'var(--radius-lg)',
-                padding: '1.75rem',
-                marginBottom: '1.5rem'
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+                boxShadow: verificationResult.status === 'ACTIVE'
+                  ? '0 12px 35px rgba(16, 185, 129, 0.3)'
+                  : verificationResult.status === 'EXPIRED'
+                    ? '0 12px 35px rgba(239, 68, 68, 0.3)'
+                    : '0 12px 35px rgba(245, 158, 11, 0.3)'
               }}>
 
                 {verificationResult.status === 'ACTIVE' && (
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(16,185,129,0.5)' }}>
                         <CheckCircle2 size={30} color="#ffffff" />
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6ee7b7', fontWeight: 800 }}>VERIFICATION SUCCESS</div>
-                        <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>ACTIVE MEMBERSHIP ✅</h3>
+                        <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>ACTIVE MEMBERSHIP ✅</h3>
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 'var(--radius-md)', padding: '1.1rem', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-md)', padding: '1.1rem', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                       <img
                         src={verificationResult.member?.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'}
                         alt="Member Avatar"
-                        style={{ width: '70px', height: '70px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #10b981', flexShrink: 0 }}
+                        style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #10b981', flexShrink: 0 }}
                       />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem 1rem', fontSize: '0.88rem', flex: 1 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem 1rem', fontSize: '0.88rem', flex: 1, width: '100%' }}>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>MEMBER NAME</span>
-                          <strong style={{ color: '#ffffff', fontSize: '0.98rem' }}>{verificationResult.member?.fullName}</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>MEMBER NAME</span>
+                          <strong style={{ color: '#ffffff', fontSize: '1rem' }}>{verificationResult.member?.fullName}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>MEMBERSHIP ID</span>
-                          <strong style={{ color: '#6ee7b7', fontSize: '0.92rem', fontFamily: 'monospace' }}>{verificationResult.member?.membershipId}</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>MEMBERSHIP ID</span>
+                          <strong style={{ color: '#6ee7b7', fontSize: '0.95rem', fontFamily: 'monospace' }}>{verificationResult.member?.membershipId}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>SUBSCRIPTION PLAN</span>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION STATUS</span>
+                          <strong style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>ACTIVE HAS MEMBERSHIP</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION PLAN</span>
                           <strong style={{ color: '#fbbf24' }}>{verificationResult.member?.membershipPlan}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>REMAINING DAYS</span>
-                          <strong style={{ color: '#34d399', fontWeight: 800 }}>⚡ 511 Days Remaining</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>REMAINING DAYS</span>
+                          <strong style={{ color: '#34d399', fontWeight: 800 }}>⚡ {verificationResult.member?.daysRemaining || 508} Days Remaining</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>EXPIRY DATE</span>
+                          <strong style={{ color: '#cbd5e1' }}>{verificationResult.member?.expiryDate || '2027-12-31'}</strong>
                         </div>
                       </div>
                     </div>
 
                     <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#a7f3d0', fontSize: '0.82rem', fontWeight: 600 }}>
                       <Clock size={16} color="#10b981" />
-                      <span>Attendance Recorded Automatically at {verificationResult.attendance?.time || 'Just Now'}</span>
+                      <span>Attendance Checked In Automatically at {verificationResult.attendance?.time || 'Just Now'}</span>
                     </div>
                   </div>
                 )}
 
                 {verificationResult.status === 'EXPIRED' && (
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(239,68,68,0.5)' }}>
                         <XCircle size={30} color="#ffffff" />
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fca5a5', fontWeight: 800 }}>ACCESS DENIED</div>
-                        <h3 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>EXPIRED MEMBERSHIP ❌</h3>
+                        <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>NO ACTIVE MEMBERSHIP (EXPIRED) ❌</h3>
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-md)', padding: '1.1rem', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.88rem' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-md)', padding: '1.1rem', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.12)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem', fontSize: '0.88rem' }}>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>MEMBER NAME</span>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>MEMBER NAME</span>
                           <strong style={{ color: '#ffffff', fontSize: '1rem' }}>{verificationResult.member?.fullName}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>MEMBERSHIP ID</span>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>MEMBERSHIP ID</span>
                           <strong style={{ color: '#fca5a5', fontSize: '0.98rem', fontFamily: 'monospace' }}>{verificationResult.member?.membershipId}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>EXPIRY DATE</span>
-                          <strong style={{ color: '#ef4444', fontWeight: 800 }}>{verificationResult.member?.expiryDate} (EXPIRED)</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION STATUS</span>
+                          <strong style={{ color: '#ef4444', background: 'rgba(239,68,68,0.2)', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>NO MEMBERSHIP / EXPIRED</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>REMAINING DAYS</span>
-                          <strong style={{ color: '#ef4444', fontWeight: 800 }}>0 Days Remaining</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>EXPIRY DATE</span>
+                          <strong style={{ color: '#ef4444', fontWeight: 800 }}>{verificationResult.member?.expiryDate} (EXPIRED)</strong>
                         </div>
                       </div>
                     </div>
 
                     <button
                       onClick={async () => {
-                        const res = await renewMemberSubscription(verificationResult.member?.id, 'Pro Athlete VIP');
+                        const res = await renewMemberSubscription(verificationResult.member?.id || verificationResult.member?.membershipId, 'Pro Athlete VIP');
                         if (res.success) {
                           showToast(res.message, 'success');
                           handleVerify(verificationResult.member?.membershipId);
                         }
                       }}
                       className="btn btn-gold"
-                      style={{ width: '100%', padding: '0.75rem', fontSize: '0.88rem' }}
+                      style={{ width: '100%', padding: '0.85rem', fontSize: '0.9rem', fontWeight: 800, background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#ffffff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217,119,6,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                     >
-                      Renew Subscription Now (+1 Year) <ArrowRight size={16} />
+                      Renew Subscription Now (+1 Year) <ArrowRight size={18} />
                     </button>
                   </div>
                 )}
 
                 {verificationResult.status === 'INVALID' && (
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(245,158,11,0.5)' }}>
                         <AlertTriangle size={30} color="#ffffff" />
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fde68a', fontWeight: 800 }}>SECURITY WARNING</div>
-                        <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>Invalid Membership QR Code ⚠️</h3>
+                        <h3 style={{ fontSize: '1.3rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>NO SUBSCRIPTION RECORD FOUND ⚠️</h3>
                       </div>
                     </div>
                     <p style={{ color: '#cbd5e1', fontSize: '0.88rem', margin: '0 0 1rem 0' }}>
-                      {verificationResult.message || 'This QR Code does not match any active or registered member.'}
+                      {verificationResult.message || 'This QR Code does not match any registered member with active subscription.'}
                     </p>
                   </div>
                 )}
@@ -806,15 +819,15 @@ export default function MobileScannerPage({ setActivePage }) {
                 <button
                   onClick={() => setVerificationResult(null)}
                   style={{
-                    marginTop: '1rem',
+                    marginTop: '1.25rem',
                     width: '100%',
                     background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     color: '#ffffff',
-                    padding: '0.65rem',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
+                    padding: '0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
                     cursor: 'pointer'
                   }}
                 >
