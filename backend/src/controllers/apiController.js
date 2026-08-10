@@ -10,7 +10,7 @@ const getHealth = (req, res) => {
   });
 };
 
-// Auth: Register User
+// Auth: Register New Member or Admin
 const registerUser = (req, res) => {
   const { fullName, email, password, phone, membershipPlan } = req.body;
 
@@ -21,17 +21,18 @@ const registerUser = (req, res) => {
     });
   }
 
-  const existing = store.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
+  const cleanEmail = email.toLowerCase().trim();
+  const existingUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+  if (existingUser) {
     return res.status(400).json({
       success: false,
-      message: 'An account with this email address already exists. Please login instead.'
+      message: 'An account with this email address already exists.'
     });
   }
 
   const newId = 'usr_' + Date.now();
-  const cleanEmail = email.toLowerCase().trim();
-  const qrCode = 'AFG-QR-' + Math.floor(100000 + Math.random() * 900000) + '-' + fullName.split(' ')[0].toUpperCase();
+  const memNum = Math.floor(100000 + Math.random() * 900000);
+  const code = `AFG-${memNum}`;
   const assignedRole = req.body.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
 
   const newUser = {
@@ -39,12 +40,14 @@ const registerUser = (req, res) => {
     fullName,
     email: cleanEmail,
     password,
-    phone: phone || 'N/A',
-    membershipPlan: membershipPlan || 'Pro Athlete',
+    phone: phone || '(555) 000-0000',
+    membershipPlan: membershipPlan || (assignedRole === 'admin' ? 'Staff Admin' : 'Pro Athlete VIP'),
+    membershipId: code,
+    qrCode: code,
     role: assignedRole,
     status: 'ACTIVE_MEMBER',
     joinedDate: new Date().toISOString().split('T')[0],
-    qrCode,
+    expiryDate: '2027-12-31',
     emergencyContact: 'Not provided',
     fitnessGoal: 'General Health & Fitness',
     totalCheckIns: 1,
@@ -84,18 +87,22 @@ const loginUser = (req, res) => {
     const isAdmin = cleanEmail.includes('admin') || role === 'admin';
     const namePart = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ');
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    
+    const memNum = Math.floor(100000 + Math.random() * 900000);
+    const code = `AFG-${memNum}`;
+
     user = {
       id: 'usr_' + Date.now(),
       fullName: formattedName || 'Gym Member',
       email: cleanEmail,
       password: password,
       phone: '(555) 000-0000',
-      membershipPlan: isAdmin ? 'Staff Admin' : 'Pro Athlete',
+      membershipPlan: isAdmin ? 'Staff Admin' : 'Pro Athlete VIP',
+      membershipId: code,
+      qrCode: code,
       role: isAdmin ? 'admin' : 'user',
       status: 'ACTIVE_MEMBER',
       joinedDate: new Date().toISOString().split('T')[0],
-      qrCode: 'AFG-QR-' + Math.floor(100000 + Math.random() * 900000),
+      expiryDate: '2027-12-31',
       emergencyContact: 'Not provided',
       fitnessGoal: 'General Health & Fitness',
       totalCheckIns: 1,
@@ -106,6 +113,11 @@ const loginUser = (req, res) => {
   } else {
     // Ensure password matches or allow update
     user.password = password;
+    if (!user.membershipId) {
+      const memNum = Math.floor(100000 + Math.random() * 900000);
+      user.membershipId = user.qrCode || `AFG-${memNum}`;
+      user.qrCode = user.membershipId;
+    }
   }
 
   const { password: _, ...userWithoutPassword } = user;
@@ -450,14 +462,29 @@ const verifyQR = (req, res) => {
     });
   }
 
+  const cleanCode = code.replace(/[^A-Z0-9]/g, '');
+
   // Find matching user in store
-  const foundUser = store.users.find(u => 
-    (u.qrCode && u.qrCode.toUpperCase().includes(code)) ||
-    (u.membershipId && u.membershipId.toUpperCase().includes(code)) ||
-    (u.id && u.id.toUpperCase().includes(code)) ||
-    (u.email && u.email.toUpperCase().includes(code)) ||
-    (u.fullName && u.fullName.toUpperCase().includes(code))
-  );
+  const foundUser = store.users.find(u => {
+    const uQr = (u.qrCode || '').toUpperCase();
+    const uMem = (u.membershipId || '').toUpperCase();
+    const uId = (u.id || '').toUpperCase();
+    const uEmail = (u.email || '').toUpperCase();
+    const uName = (u.fullName || '').toUpperCase();
+
+    return (
+      (uQr && (uQr.includes(code) || code.includes(uQr))) ||
+      (uMem && (uMem.includes(code) || code.includes(uMem))) ||
+      (uId && (uId.includes(code) || code.includes(uId))) ||
+      (uEmail && uEmail.includes(code)) ||
+      (uName && uName.includes(code)) ||
+      (cleanCode.length >= 4 && (
+        (uQr && uQr.replace(/[^A-Z0-9]/g, '').includes(cleanCode)) ||
+        (uMem && uMem.replace(/[^A-Z0-9]/g, '').includes(cleanCode)) ||
+        (uId && uId.replace(/[^A-Z0-9]/g, '').includes(cleanCode))
+      ))
+    );
+  });
 
   // Check if explicit expired code or user status is expired
   if (code.includes('EXPIRED') || code === 'AFG-EXPIRED-99' || (foundUser && foundUser.status === 'EXPIRED')) {
