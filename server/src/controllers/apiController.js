@@ -111,18 +111,24 @@ const loginUser = (req, res) => {
     };
     store.users.push(user);
   } else {
-    // Update password, role, and domain if provided during login
+    // Update password or role if provided during login
     user.password = password;
-    if (role) user.role = selectedRole;
-    if (domain) user.domain = domain;
+    if (!user.membershipId) {
+      const memNum = Math.floor(100000 + Math.random() * 900000);
+      user.membershipId = user.qrCode || `AFG-${memNum}`;
+      user.qrCode = user.membershipId;
+    }
   }
 
   const { password: _, ...userWithoutPassword } = user;
+  const effectiveRole = role === 'admin' || user.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
+  userWithoutPassword.role = effectiveRole;
+
   const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
 
   res.json({
     success: true,
-    message: `Welcome back, ${user.fullName}! Signed in as ${user.role === 'admin' ? 'Admin Officer' : 'Member'}.`,
+    message: `Welcome back, ${user.fullName} (${effectiveRole === 'admin' ? 'Admin Officer' : 'User Member'})!`,
     token,
     user: userWithoutPassword
   });
