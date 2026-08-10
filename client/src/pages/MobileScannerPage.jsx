@@ -728,6 +728,7 @@ export default function MobileScannerPage({ setActivePage }) {
                   <div style={{ position: 'relative', width: '100%', height: '280px', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000000', border: '2px solid rgba(245, 158, 11, 0.8)' }}>
                     <video
                       ref={videoRef}
+                      autoPlay
                       playsInline
                       muted
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
