@@ -597,28 +597,45 @@ export default function MobileScannerPage({ setActivePage }) {
         {/* TAB 1: SCANNER & VERIFICATION */}
         {activeAdminTab === 'scanner' && (
           <div>
-            {/* HTTP Security Context Warning Banner */}
-            {isHttpInsecure && (
-              <div style={{
-                background: 'rgba(217, 119, 6, 0.18)',
-                border: '1.5px solid #f59e0b',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.9rem 1.1rem',
-                marginBottom: '1.25rem',
-                color: '#fde68a',
-                fontSize: '0.84rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.2)'
-              }}>
-                <AlertTriangle size={24} color="#f59e0b" style={{ flexShrink: 0 }} />
-                <div>
-                  <strong style={{ color: '#ffffff', display: 'block', fontSize: '0.92rem', marginBottom: '0.15rem' }}>🔒 INSECURE CONNECTION (HTTP) DETECTED</strong>
-                  Mobile browsers (Android Chrome & iPhone Safari) restrict live WebRTC camera streaming over plain HTTP. Run on HTTPS or localhost for direct video streaming, or tap <strong>"UPLOAD / SNAP PHOTO OF QR CODE"</strong> below to scan using your mobile phone camera!
-                </div>
+            {/* Mobile Camera Instant Scanner Box */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid #10b981',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1.25rem',
+              marginBottom: '1.5rem',
+              textAlign: 'center',
+              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.25)'
+            }}>
+              <div style={{ fontSize: '0.78rem', color: '#6ee7b7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
+                📱 SMARTPHONE SCANNER MODE
               </div>
-            )}
+              <div style={{ fontSize: '0.92rem', color: '#ffffff', fontWeight: 700, marginBottom: '0.85rem' }}>
+                Tap below to open your mobile camera & scan member QR code!
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="btn pulse-button"
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  fontSize: '1.05rem',
+                  fontWeight: 900,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.65rem'
+                }}
+              >
+                <Camera size={22} /> 📷 SNAP PHOTO OF MEMBER QR CODE
+              </button>
+            </div>
 
             {/* 1. Dedicated Manual Membership ID Subscription Checker */}
             <div className="glass-card" style={{
