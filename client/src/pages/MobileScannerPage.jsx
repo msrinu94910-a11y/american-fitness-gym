@@ -44,6 +44,17 @@ export default function MobileScannerPage({ setActivePage }) {
   const lastScannedCodeRef = useRef(null);
   const scanDebounceTimerRef = useRef(null);
   const resultCardRef = useRef(null);
+  const detectorRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      try {
+        detectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
+      } catch (e) {
+        detectorRef.current = null;
+      }
+    }
+  }, []);
 
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
@@ -186,38 +197,53 @@ export default function MobileScannerPage({ setActivePage }) {
   // Continuous Frame Scanner Loop
   const scanFrame = async () => {
     const video = videoRef.current;
-    if (video && video.readyState >= 2) {
+    if (video && video.readyState >= 2 && !isLoading) {
       const canvas = canvasRef.current;
       if (video.videoWidth > 0 && video.videoHeight > 0) {
         let scannedText = null;
 
-        // 1. Try Native BarcodeDetector API if supported (Fastest on Mobile Android Chrome/Edge)
-        if ('BarcodeDetector' in window) {
+        // 1. Try Native BarcodeDetector instance if supported (Fastest on Mobile Android Chrome/Edge)
+        if (detectorRef.current) {
           try {
-            const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-            const barcodes = await detector.detect(video);
+            const barcodes = await detectorRef.current.detect(video);
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
               scannedText = barcodes[0].rawValue.trim();
             }
-          } catch (e) {
-            // fallback to jsQR
-          }
+          } catch (e) {}
         }
 
-        // 2. Fallback to jsQR with attemptBoth for maximum recognition rate
+        // 2. Dual Pass jsQR: Center Box Crop + Full Frame Scan
         if (!scannedText && canvas) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'attemptBoth',
-          });
+          // Pass 2A: Center 60% Crop Scan (Targeted for "ALIGN QR CODE HERE" yellow box)
+          const cropW = Math.floor(canvas.width * 0.6);
+          const cropH = Math.floor(canvas.height * 0.6);
+          const cropX = Math.floor((canvas.width - cropW) / 2);
+          const cropY = Math.floor((canvas.height - cropH) / 2);
 
-          if (code && code.data && code.data.trim() !== '') {
-            scannedText = code.data.trim();
+          try {
+            const cropImageData = ctx.getImageData(cropX, cropY, cropW, cropH);
+            const cropCode = jsQR(cropImageData.data, cropImageData.width, cropImageData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+            if (cropCode && cropCode.data && cropCode.data.trim() !== '') {
+              scannedText = cropCode.data.trim();
+            }
+          } catch (e) {}
+
+          // Pass 2B: Full Frame Scan if center crop didn't find anything
+          if (!scannedText) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+            if (code && code.data && code.data.trim() !== '') {
+              scannedText = code.data.trim();
+            }
           }
         }
 
@@ -226,14 +252,17 @@ export default function MobileScannerPage({ setActivePage }) {
           handleVerify(scannedText);
 
           // Debounce same code for 3.5 seconds
-          clearTimeout(scanDebounceTimerRef.current);
+          if (scanDebounceTimerRef.current) clearTimeout(scanDebounceTimerRef.current);
           scanDebounceTimerRef.current = setTimeout(() => {
             lastScannedCodeRef.current = null;
           }, 3500);
         }
       }
     }
-    animFrameRef.current = requestAnimationFrame(scanFrame);
+
+    if (isScanning) {
+      animFrameRef.current = requestAnimationFrame(scanFrame);
+    }
   };
 
   // Ensure video element receives camera stream when mounted
