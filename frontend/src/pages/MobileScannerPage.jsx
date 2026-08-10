@@ -1056,26 +1056,34 @@ export default function MobileScannerPage({ setActivePage }) {
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION STATUS</span>
-                          <strong style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>ACTIVE HAS SUBSCRIPTION</strong>
+                          <strong style={{ color: '#10b981', background: 'rgba(16,185,129,0.2)', padding: '0.2rem 0.6rem', borderRadius: '6px', display: 'inline-block', fontWeight: 800 }}>🟢 Active Membership</strong>
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION PLAN</span>
                           <strong style={{ color: '#fbbf24' }}>{verificationResult.member?.membershipPlan}</strong>
                         </div>
                         <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>REMAINING DAYS</span>
-                          <strong style={{ color: '#34d399', fontWeight: 800 }}>⚡ {verificationResult.member?.daysRemaining || 508} Days Remaining</strong>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION START DATE</span>
+                          <strong style={{ color: '#cbd5e1' }}>{verificationResult.member?.joinedDate || '2026-01-15'}</strong>
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>EXPIRY DATE</span>
                           <strong style={{ color: '#cbd5e1' }}>{verificationResult.member?.expiryDate || '2027-12-31'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>REMAINING DAYS</span>
+                          <strong style={{ color: '#34d399', fontWeight: 800 }}>⚡ {verificationResult.member?.daysRemaining || 508} Days Remaining</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', fontWeight: 700 }}>GYM ENTRY PERMISSION</span>
+                          <strong style={{ color: '#10b981', background: 'rgba(16,185,129,0.2)', padding: '0.2rem 0.6rem', borderRadius: '6px', display: 'inline-block', fontWeight: 900 }}>GYM ENTRY ALLOWED ✅</strong>
                         </div>
                       </div>
                     </div>
 
                     <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#a7f3d0', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1.25rem' }}>
                       <Clock size={16} color="#10b981" />
-                      <span>Attendance Checked In Automatically at {verificationResult.attendance?.time || 'Just Now'}</span>
+                      <span>Attendance Logged at {verificationResult.attendance?.time || 'Just Now'} ({verificationResult.attendance?.date || new Date().toISOString().split('T')[0]})</span>
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -1132,7 +1140,7 @@ export default function MobileScannerPage({ setActivePage }) {
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fca5a5', fontWeight: 800 }}>ACCESS DENIED</div>
-                        <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>NO ACTIVE MEMBERSHIP (EXPIRED) ❌</h3>
+                        <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>SUBSCRIPTION EXPIRED ❌</h3>
                       </div>
                     </div>
 
@@ -1148,11 +1156,23 @@ export default function MobileScannerPage({ setActivePage }) {
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION STATUS</span>
-                          <strong style={{ color: '#ef4444', background: 'rgba(239,68,68,0.2)', padding: '0.15rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>NO MEMBERSHIP / EXPIRED</strong>
+                          <strong style={{ color: '#ef4444', background: 'rgba(239,68,68,0.2)', padding: '0.2rem 0.6rem', borderRadius: '6px', display: 'inline-block', fontWeight: 800 }}>🔴 Subscription Expired</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>SUBSCRIPTION PLAN</span>
+                          <strong style={{ color: '#cbd5e1' }}>{verificationResult.member?.membershipPlan}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>START DATE</span>
+                          <strong style={{ color: '#cbd5e1' }}>{verificationResult.member?.joinedDate || '2024-01-10'}</strong>
                         </div>
                         <div>
                           <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>EXPIRY DATE</span>
                           <strong style={{ color: '#ef4444', fontWeight: 800 }}>{verificationResult.member?.expiryDate} (EXPIRED)</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', fontWeight: 700 }}>GYM ENTRY PERMISSION</span>
+                          <strong style={{ color: '#ef4444', background: 'rgba(239,68,68,0.25)', padding: '0.2rem 0.6rem', borderRadius: '6px', display: 'inline-block', fontWeight: 900 }}>GYM ENTRY DENIED ❌</strong>
                         </div>
                       </div>
                     </div>
