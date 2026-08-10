@@ -274,21 +274,10 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Launcher Handler - Launches live stream or native camera picker
+  // Mobile Camera Launcher Handler - Directly starts live in-page video QR scanner
   const handleTurnOnCamera = () => {
     setCameraError(null);
     setVerificationResult(null);
-
-    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-    if (!isHttps && !isLocalhost) {
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-      return;
-    }
-
     startCamera();
   };
 
@@ -334,15 +323,6 @@ export default function MobileScannerPage({ setActivePage }) {
         } catch (e3) {}
       }
 
-      // 4. Fallback: Legacy getUserMedia API
-      if (!stream && getMedia) {
-        try {
-          stream = await new Promise((resolve, reject) => {
-            getMedia.call(navigator, { video: true }, resolve, reject);
-          });
-        } catch (e4) {}
-      }
-
       if (!stream) {
         throw new Error('CAMERA_STREAM_DENIED');
       }
@@ -358,12 +338,9 @@ export default function MobileScannerPage({ setActivePage }) {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
-      console.warn('Live WebRTC stream initialization error, launching native camera:', err);
+      console.warn('Live WebRTC stream initialization error:', err);
       setIsScanning(false);
-      showToast('📷 Opening smartphone camera...', 'info');
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
+      setCameraError('📷 Camera Permission Required: Please allow camera access in your mobile browser settings to scan QR codes live.');
     }
   };
 
@@ -735,45 +712,6 @@ export default function MobileScannerPage({ setActivePage }) {
         {/* TAB 1: SCANNER & VERIFICATION */}
         {activeAdminTab === 'scanner' && (
           <div>
-            {/* Mobile Camera Instant Scanner Box */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid #10b981',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.25rem',
-              marginBottom: '1.5rem',
-              textAlign: 'center',
-              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.25)'
-            }}>
-              <div style={{ fontSize: '0.78rem', color: '#6ee7b7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
-                📱 SMARTPHONE SCANNER MODE
-              </div>
-              <div style={{ fontSize: '0.92rem', color: '#ffffff', fontWeight: 700, marginBottom: '0.85rem' }}>
-                Tap below to open your mobile camera & scan member QR code!
-              </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="btn pulse-button"
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  fontSize: '1.05rem',
-                  fontWeight: 900,
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.65rem'
-                }}
-              >
-                <Camera size={22} /> 📷 SNAP PHOTO OF MEMBER QR CODE
-              </button>
-            </div>
 
             {/* 1. Dedicated Manual Membership ID Subscription Checker */}
             <div className="glass-card" style={{
@@ -901,34 +839,6 @@ export default function MobileScannerPage({ setActivePage }) {
                     >
                       <Camera size={22} /> TURN ON CAMERA SCANNER
                     </button>
-
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      width: '100%',
-                      padding: '0.85rem',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(245, 158, 11, 0.4)',
-                      borderRadius: 'var(--radius-md)',
-                      color: '#fbbf24',
-                      fontSize: '0.9rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)'
-                    }}>
-                      <ImageIcon size={18} color="#fbbf24" />
-                      <span>UPLOAD / SNAP PHOTO OF QR CODE</span>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleFileUpload}
-                        style={{ display: 'none' }}
-                      />
-                    </label>
                   </div>
 
                   {cameraError && (
