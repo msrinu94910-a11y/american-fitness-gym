@@ -70,9 +70,9 @@ const registerUser = (req, res) => {
   });
 };
 
-// Auth: Login User (Fixed Sign-In Protocol & Role/Domain Routing)
+// Auth: Login User
 const loginUser = (req, res) => {
-  const { email, password, role, domain } = req.body;
+  const { email, password, role } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({
@@ -83,12 +83,8 @@ const loginUser = (req, res) => {
 
   const cleanEmail = email.toLowerCase().trim();
   let user = store.users.find(u => u.email.toLowerCase() === cleanEmail);
-  const selectedRole = role === 'admin' ? 'admin' : 'member';
 
-  // If user does not exist in store, auto-provision member/admin profile on the fly
   if (!user) {
-    const rawName = cleanEmail.split('@')[0];
-    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const newId = 'usr_' + Date.now();
     const memNum = Math.floor(100000 + Math.random() * 900000);
     const membershipId = `AFG-${memNum}`;
