@@ -273,23 +273,21 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Access Engine with Rear Camera Priority & Context Checks
+  // Mobile Camera Access Engine with Rear Camera Priority & Auto-Camera Launch
   const startCamera = async () => {
     setCameraError(null);
     setVerificationResult(null);
 
-    const hostName = typeof window !== 'undefined' ? window.location.hostname : '';
     const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const isLocalSubnet = /^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^127\.|^localhost|\.local$/.test(hostName);
-    const isSecureContext = typeof window !== 'undefined' && (window.isSecureContext || isHttps || isLocalSubnet);
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    if (!isSecureContext) {
+    // Over HTTP on mobile devices, launch phone's native camera app directly
+    if (!isHttps && !isLocalhost) {
       setIsScanning(false);
-      setCameraError(
-        '🔒 Insecure Connection (HTTP): Mobile Chrome & Safari require HTTPS or local network access (https://192.168.1.3:5173). Launching native mobile camera...'
-      );
-      // Auto-trigger native mobile camera snapshot
-      setTimeout(() => fileInputRef.current?.click(), 300);
+      showToast('📷 Opening smartphone camera...', 'info');
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
       return;
     }
 
@@ -354,27 +352,11 @@ export default function MobileScannerPage({ setActivePage }) {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
-
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCameraError(
-          '📷 Camera Permission Denied: Please allow camera permissions in your mobile browser settings or tap "UPLOAD / SNAP PHOTO OF QR CODE" below.'
-        );
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setCameraError(
-          '📷 Camera Hardware Unavailable: No camera hardware was found on your device. Please use the image upload fallback below.'
-        );
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setCameraError(
-          '📷 Camera In Use: Your camera device is currently in use by another application.'
-        );
-      } else if (err.name === 'OverconstrainedError') {
-        setCameraError(
-          '📷 Rear Camera Constraint Error: Unable to bind requested rear camera settings.'
-        );
-      } else {
-        setCameraError(
-          '⚠️ Unable to start live camera stream. Please tap "UPLOAD / SNAP PHOTO OF QR CODE" below to snap a photo with your phone camera.'
-        );
+      console.warn('Live WebRTC stream initialization error, launching native camera:', err);
+      setIsScanning(false);
+      showToast('📷 Opening smartphone camera...', 'info');
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
       }
     }
   };
