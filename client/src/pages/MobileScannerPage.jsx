@@ -273,23 +273,29 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Access Engine with Rear Camera Priority & Auto-Camera Launch
-  const startCamera = async () => {
+  // Mobile Camera Launcher Handler (Synchronous for Mobile Browser Security)
+  const handleTurnOnCamera = () => {
     setCameraError(null);
     setVerificationResult(null);
 
     const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    // Over HTTP on mobile devices, launch phone's native camera app directly
     if (!isHttps && !isLocalhost) {
-      setIsScanning(false);
       showToast('📷 Opening smartphone camera...', 'info');
       if (fileInputRef.current) {
         fileInputRef.current.click();
       }
       return;
     }
+
+    startCamera();
+  };
+
+  // Mobile Camera Access Engine with Rear Camera Priority
+  const startCamera = async () => {
+    setCameraError(null);
+    setVerificationResult(null);
 
     try {
       const getMedia = navigator.mediaDevices?.getUserMedia || 
@@ -723,7 +729,7 @@ export default function MobileScannerPage({ setActivePage }) {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <button
-                      onClick={startCamera}
+                      onClick={handleTurnOnCamera}
                       className="btn pulse-button"
                       style={{
                         width: '100%',
