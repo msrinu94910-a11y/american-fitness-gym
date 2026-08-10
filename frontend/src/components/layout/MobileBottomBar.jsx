@@ -9,7 +9,7 @@ export default function MobileBottomBar({ activePage, setActivePage }) {
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
-    ...(isAdmin ? [{ id: 'admin-scanner', label: 'Scanner', icon: QrCode }] : []),
+    { id: 'admin-scanner', label: 'Scanner', icon: QrCode },
     { id: 'services', label: 'Services', icon: Sparkles },
     { id: 'contact', label: 'Contact', icon: Phone },
     { id: user ? 'dashboard' : 'login', label: user ? (user.role === 'admin' ? 'Admin' : 'Portal') : 'Profile', icon: user ? LayoutDashboard : User }

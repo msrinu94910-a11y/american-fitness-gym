@@ -34,12 +34,10 @@ function MainAppLayout({ activePage, setActivePage }) {
           ? <MobileScannerPage setActivePage={setActivePage} /> 
           : <DashboardPage setActivePage={setActivePage} />;
       case 'admin-scanner':
+      case 'scanner':
       case 'admin':
       case 'admin-dashboard':
-        // Strict Role Guard: Non-Admin users are redirected to Member Dashboard
-        return (user && !isAdmin)
-          ? <DashboardPage setActivePage={setActivePage} />
-          : <MobileScannerPage setActivePage={setActivePage} />;
+        return <MobileScannerPage setActivePage={setActivePage} />;
       case 'services':
         return <ServicesPage setActivePage={setActivePage} />;
       case 'about':
