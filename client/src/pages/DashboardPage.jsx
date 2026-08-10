@@ -267,57 +267,106 @@ export default function DashboardPage({ setActivePage }) {
             </div>
 
             {/* User Subscription & Gate Entry Status Card */}
-            <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div className="glass-card" style={{
+              padding: '2rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justify: 'space-between',
+              background: user.status === 'EXPIRED'
+                ? 'linear-gradient(145deg, rgba(127, 29, 29, 0.25) 0%, rgba(15, 23, 42, 0.6) 100%)'
+                : 'linear-gradient(145deg, rgba(6, 78, 59, 0.2) 0%, rgba(15, 23, 42, 0.6) 100%)',
+              border: user.status === 'EXPIRED'
+                ? '2px solid #ef4444'
+                : '2px solid #10b981',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: user.status === 'EXPIRED'
+                ? '0 10px 30px rgba(239,68,68,0.2)'
+                : '0 10px 30px rgba(16,185,129,0.2)'
+            }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <ShieldCheck size={26} color={user.status === 'EXPIRED' ? '#ef4444' : '#10b981'} />
+                    <ShieldCheck size={28} color={user.status === 'EXPIRED' ? '#ef4444' : '#10b981'} />
                     <div>
-                      <h3 style={{ fontSize: '1.3rem', margin: 0, fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>
+                      <h3 style={{ fontSize: '1.3rem', margin: 0, fontFamily: 'var(--font-heading)', color: '#ffffff' }}>
                         SUBSCRIPTION STATUS
                       </h3>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>24/7 Facility Keycard Access</span>
+                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>24/7 Facility Keycard Access</span>
                     </div>
                   </div>
-                  <span className={`badge ${user.status === 'EXPIRED' ? 'badge-red' : 'badge-gold'}`} style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-                    {user.status === 'EXPIRED' ? 'EXPIRED ❌' : 'ACTIVE ✅'}
+                  <span className={`badge ${user.status === 'EXPIRED' ? 'badge-red' : 'badge-green'}`} style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem', fontWeight: 800 }}>
+                    {user.status === 'EXPIRED' ? 'NO SUBSCRIPTION (EXPIRED) ❌' : 'ACTIVE SUBSCRIPTION ✅'}
                   </span>
                 </div>
 
                 {user.status === 'EXPIRED' ? (
-                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', color: '#ef4444', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                    <strong>Membership Expired on {user.expiryDate || '2025-01-15'}</strong>
-                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
-                      Your 24/7 keycard turnstile access is currently locked. Please renew your subscription plan to restore facility access.
+                  <div style={{ background: 'rgba(239,68,68,0.15)', border: '1.5px solid #ef4444', padding: '1.25rem', borderRadius: 'var(--radius-md)', color: '#fca5a5', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <XCircle size={22} color="#ef4444" />
+                      <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>YOUR SUBSCRIPTION HAS EXPIRED ❌</strong>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', margin: '0.75rem 0' }}>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', display: 'block' }}>MEMBERSHIP TIER</span>
+                        <strong style={{ color: '#fca5a5' }}>{user.membershipPlan || 'Basic Gym Access'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', display: 'block' }}>EXPIRY DATE</span>
+                        <strong style={{ color: '#ef4444' }}>{user.expiryDate || '2025-01-15'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', display: 'block' }}>DAYS REMAINING</span>
+                        <strong style={{ color: '#ef4444' }}>0 Days Remaining</strong>
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#cbd5e1' }}>
+                      Your 24/7 keycard turnstile access is currently locked. Renew your subscription below to restore facility access immediately.
                     </p>
                   </div>
                 ) : (
-                  <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', padding: '1rem', borderRadius: 'var(--radius-md)', color: '#059669', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                    <strong>Subscription Active Until {user.expiryDate || '2027-12-31'}</strong>
-                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
-                      Show your QR Code above to gym staff upon entry or tap below to simulate gate check-in.
+                  <div style={{ background: 'rgba(16,185,129,0.15)', border: '1.5px solid #10b981', padding: '1.25rem', borderRadius: 'var(--radius-md)', color: '#a7f3d0', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <CheckCircle2 size={22} color="#10b981" />
+                      <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>ACTIVE MEMBERSHIP SUBSCRIPTION ✅</strong>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', margin: '0.75rem 0' }}>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>MEMBERSHIP TIER</span>
+                        <strong style={{ color: '#fbbf24' }}>{user.membershipPlan || 'Pro Athlete VIP'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>ACTIVE UNTIL</span>
+                        <strong style={{ color: '#6ee7b7' }}>{user.expiryDate || '2027-12-31'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>REMAINING DAYS</span>
+                        <strong style={{ color: '#34d399' }}>⚡ 508 Days Left</strong>
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#cbd5e1' }}>
+                      Show your scannable QR Code on the left to gym staff upon entry or tap below to simulate gate check-in.
                     </p>
                   </div>
                 )}
 
                 {turnstileMessage && (
-                  <div style={{ background: 'rgba(13,148,136,0.12)', border: '1px solid #0D9488', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', color: '#0D9488', fontWeight: 600, fontSize: '0.88rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ background: 'rgba(13,148,136,0.15)', border: '1px solid #0D9488', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', color: '#2dd4bf', fontWeight: 600, fontSize: '0.88rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <CheckCircle2 size={18} /> {turnstileMessage}
                   </div>
                 )}
 
-                <div style={{ background: 'var(--bg-card)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', marginBottom: '1.5rem' }}>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.88rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Total Facility Check-Ins:</span>
-                    <strong style={{ color: 'var(--text-main)' }}>{user.totalCheckIns || 1} Visits</strong>
+                    <span style={{ color: '#94a3b8' }}>Total Facility Check-Ins:</span>
+                    <strong style={{ color: '#ffffff' }}>{user.totalCheckIns || 1} Visits</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.88rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Workout Streak:</span>
-                    <strong style={{ color: 'var(--accent-gold)' }}>🔥 {user.workoutStreakDays || 1} Days Active</strong>
+                    <span style={{ color: '#94a3b8' }}>Workout Streak:</span>
+                    <strong style={{ color: '#fbbf24' }}>🔥 {user.workoutStreakDays || 1} Days Active</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Member Rewards:</span>
-                    <strong style={{ color: '#0284C7' }}>⚡ {user.rewardPoints || 100} Points</strong>
+                    <span style={{ color: '#94a3b8' }}>Member Rewards:</span>
+                    <strong style={{ color: '#38bdf8' }}>⚡ {user.rewardPoints || 100} Points</strong>
                   </div>
                 </div>
 
@@ -326,7 +375,7 @@ export default function DashboardPage({ setActivePage }) {
                   <button
                     onClick={handleRenewSubscription}
                     className="btn btn-gold pulse-button"
-                    style={{ width: '100%', height: '46px', fontSize: '0.98rem', fontWeight: 800 }}
+                    style={{ width: '100%', height: '48px', fontSize: '1rem', fontWeight: 800, background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#ffffff', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: '0 4px 15px rgba(217,119,6,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                   >
                     Renew Subscription Plan Now (+1 Year) <RefreshCw size={18} />
                   </button>
@@ -335,11 +384,26 @@ export default function DashboardPage({ setActivePage }) {
                     onClick={handleTapTurnstile}
                     disabled={scanning}
                     className="btn btn-primary"
-                    style={{ width: '100%', height: '46px', fontSize: '0.98rem' }}
+                    style={{ width: '100%', height: '48px', fontSize: '1rem', fontWeight: 800 }}
                   >
                     {scanning ? 'Authenticating Gate...' : <><Zap size={18} /> Simulate Turnstile Gate Check-In</>}
                   </button>
                 )}
+
+                {/* Toggle Status for Quick Demo Verification */}
+                <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                  <button
+                    onClick={() => {
+                      const newStatus = user.status === 'EXPIRED' ? 'ACTIVE_MEMBER' : 'EXPIRED';
+                      const newDate = newStatus === 'EXPIRED' ? '2025-01-15' : '2027-12-31';
+                      setUser(prev => ({ ...prev, status: newStatus, expiryDate: newDate }));
+                      showToast(`Switched user status to ${newStatus === 'EXPIRED' ? 'EXPIRED ❌' : 'ACTIVE ✅'} for demonstration`, 'info');
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    ⚡ Demo Mode: Click to toggle Active vs Expired Status Card
+                  </button>
+                </div>
 
                 {/* If user is an Admin, show discreet Admin Scanner launch link */}
                 {(user.role === 'admin' || user.email?.includes('admin')) && (
