@@ -274,7 +274,7 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   }, [isScanning]);
 
-  // Mobile Camera Launcher Handler - Directly starts live WebRTC video stream
+  // Mobile Camera Launcher Handler - Launches live stream or native camera picker
   const handleTurnOnCamera = () => {
     setCameraError(null);
     setVerificationResult(null);
@@ -283,10 +283,9 @@ export default function MobileScannerPage({ setActivePage }) {
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
     if (!isHttps && !isLocalhost) {
-      showToast('🔄 Redirecting to secure connection (HTTPS) for live scanner...', 'info');
-      setTimeout(() => {
-        window.location.href = window.location.href.replace('http:', 'https:');
-      }, 800);
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
       return;
     }
 
