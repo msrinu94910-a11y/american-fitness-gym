@@ -63,8 +63,8 @@ const DEFAULT_PLANS = [
 ];
 
 export default function MembershipsPage({ setActivePage }) {
-  const { user, setUser, showToast } = useApp();
-  const [plans, setPlans] = useState(DEFAULT_PLANS);
+  const { user, setUser, showToast, cmsData } = useApp();
+  const plans = (cmsData?.memberships && cmsData.memberships.length > 0) ? cmsData.memberships : DEFAULT_PLANS;
   const [isAnnual, setIsAnnual] = useState(true);
   const [activeFaq, setActiveFaq] = useState(0);
 
@@ -91,16 +91,6 @@ export default function MembershipsPage({ setActivePage }) {
       showToast('Error processing subscription.', 'error');
     }
   };
-
-  useEffect(() => {
-    fetchMemberships()
-      .then((res) => {
-        if (res && res.success && res.data && res.data.length > 0) {
-          setPlans(res.data);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const faqs = [
     {
@@ -200,7 +190,9 @@ export default function MembershipsPage({ setActivePage }) {
           }}
         >
           {plans.map((plan) => {
-            const price = isAnnual ? (plan.annualPrice || 24) : (plan.monthlyPrice || 29);
+            const price = isAnnual 
+              ? (plan.annualPrice !== undefined && plan.annualPrice !== null ? plan.annualPrice : Math.round((plan.monthlyPrice || 39) * 0.8)) 
+              : (plan.monthlyPrice || 39);
             const isPopular = plan.popular || plan.tier === 'pro';
 
             return (

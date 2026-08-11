@@ -110,6 +110,66 @@ export default function DashboardPage({ setActivePage }) {
     <div style={{ paddingTop: '2.5rem', paddingBottom: '6rem', minHeight: '85vh' }}>
       <div className="container" style={{ maxWidth: '1000px' }}>
         
+        {/* Automatic Expiry Notice Alert Banner in User Dashboard */}
+        {(user.status === 'EXPIRED' || user.status === 'EXPIRED_MEMBER' || user.lastNoticeSent || (user.expiryDate && new Date(user.expiryDate) < new Date())) && (
+          <div
+            className="glass-card"
+            style={{
+              padding: '1.5rem 1.75rem',
+              marginBottom: '2rem',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.25) 100%)',
+              border: '2px solid #ef4444',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 8px 30px rgba(239, 68, 68, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.25rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.1rem', flex: 1, minWidth: '280px' }}>
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#ef4444', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(239,68,68,0.5)' }}>
+                <AlertCircle size={30} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fca5a5', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>⚠️ MEMBERSHIP EXPIRY NOTICE FROM ADMIN</span>
+                  <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', color: '#ffffff' }}>{user.lastNoticeSent || 'Notice Received'}</span>
+                </div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                  {user.lastNoticeDetails?.message || `Dear ${user.fullName || 'Member'}, your ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
+                  📩 Delivered via SMS & Email to <strong>{user.email}</strong> • <strong>{user.phone || '(555) 888-9900'}</strong>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleRenewSubscription}
+              className="btn pulse-button"
+              style={{
+                padding: '0.85rem 1.5rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 900,
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(2, 132, 199, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                flexShrink: 0
+              }}
+            >
+              <RefreshCw size={18} /> RENEW MEMBERSHIP NOW (+1 YR)
+            </button>
+          </div>
+        )}
+
         {/* Top Member Header Banner */}
         <div
           className="glass-card"

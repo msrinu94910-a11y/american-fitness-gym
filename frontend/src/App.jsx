@@ -21,6 +21,7 @@ import MobileScannerPage from './pages/MobileScannerPage';
 function MainAppLayout({ activePage, setActivePage }) {
   const { user } = useApp();
   const isAdmin = user?.role === 'admin' || user?.email?.includes('admin');
+  const isAdminPage = activePage === 'scanner' || activePage === 'admin' || activePage === 'admin-scanner' || activePage === 'admin-dashboard' || (activePage === 'dashboard' && isAdmin);
 
   const renderPage = () => {
     switch (activePage) {
@@ -58,17 +59,17 @@ function MainAppLayout({ activePage, setActivePage }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
-      <Navbar activePage={activePage} setActivePage={setActivePage} />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: isAdminPage ? '#090d16' : '#ffffff' }}>
+      {!isAdminPage && <Navbar activePage={activePage} setActivePage={setActivePage} />}
       
       <main style={{ flex: 1 }}>
         {renderPage()}
       </main>
 
-      <Footer setActivePage={setActivePage} />
+      {!isAdminPage && <Footer setActivePage={setActivePage} />}
       
       {/* Mobile Bottom App Navigation Bar */}
-      <MobileBottomBar activePage={activePage} setActivePage={setActivePage} />
+      {!isAdminPage && <MobileBottomBar activePage={activePage} setActivePage={setActivePage} />}
 
       {/* Global Modals & Notifications */}
       <DayPassModal />

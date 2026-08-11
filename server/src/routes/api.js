@@ -30,6 +30,7 @@ router.get('/admin/attendance', controller.getAttendanceLogs);
 router.get('/admin/analytics', controller.getAdminAnalytics);
 router.get('/admin/members', controller.getAdminMembers);
 router.post('/admin/generate-qr', controller.generateMemberQR);
+router.post('/admin/send-expiry-notice', controller.sendExpiryNotice);
 router.post('/user/renew-subscription', controller.renewSubscription);
 
 // Public Gym Data Endpoints
@@ -40,5 +41,15 @@ router.get('/blog', controller.getBlogPosts);
 // Lead Submissions
 router.post('/contact', controller.submitContact);
 router.post('/trial-pass', controller.submitTrialPass);
+
+// CMS Dynamic Endpoints
+router.get('/cms/content', controller.getCmsContent);
+router.put('/cms/homepage', controller.updateHomepageContent);
+router.post('/cms/services', controller.saveService);
+router.put('/cms/services/:id', controller.saveService);
+router.delete('/cms/services/:id', controller.deleteService);
+router.post('/cms/memberships', controller.saveMembership);
+router.put('/cms/memberships/:id', controller.saveMembership);
+router.delete('/cms/memberships/:id', controller.deleteMembership);
 
 module.exports = router;

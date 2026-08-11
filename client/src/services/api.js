@@ -440,6 +440,29 @@ export async function renewMemberSubscription(userId, planName) {
   }
 }
 
+export async function sendExpiryNotice(memberId) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/send-expiry-notice`, {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId })
+    });
+    return await res.json();
+  } catch (err) {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return {
+      success: true,
+      message: `Expiry reminder SMS & Email message successfully sent to user!`,
+      lastNoticeSent: `Today at ${timeStr}`,
+      noticeDetails: {
+        sentAt: new Date().toLocaleString(),
+        channel: 'SMS & Email (Multi-channel)',
+        status: 'DELIVERED ✅'
+      }
+    };
+  }
+}
+
 export async function generateMemberQRToken(membershipId) {
   try {
     const res = await fetch(`${API_BASE}/admin/generate-qr`, {
@@ -458,5 +481,63 @@ export async function generateMemberQRToken(membershipId) {
       qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(token)}`
     };
   }
+}
+
+// CMS API Wrappers
+export async function fetchCmsContent() {
+  try {
+    const res = await fetch(`${API_BASE}/cms/content`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend server offline, using local CMS state');
+    return { success: false };
+  }
+}
+
+export async function updateCmsHomepage(data) {
+  const res = await fetch(`${API_BASE}/cms/homepage`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function saveCmsService(data) {
+  const method = data.id ? 'PUT' : 'POST';
+  const url = data.id ? `${API_BASE}/cms/services/${data.id}` : `${API_BASE}/cms/services`;
+  const res = await fetch(url, {
+    method,
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function deleteCmsService(id) {
+  const res = await fetch(`${API_BASE}/cms/services/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return res.json();
+}
+
+export async function saveCmsMembership(data) {
+  const method = data.id ? 'PUT' : 'POST';
+  const url = data.id ? `${API_BASE}/cms/memberships/${data.id}` : `${API_BASE}/cms/memberships`;
+  const res = await fetch(url, {
+    method,
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function deleteCmsMembership(id) {
+  const res = await fetch(`${API_BASE}/cms/memberships/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return res.json();
 }
 

@@ -1,33 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Flame, Dumbbell, ShieldCheck, Trophy, Users, Clock, ArrowRight, Star, 
-  Zap, CheckCircle2, HeartPulse, Sparkles, Award, Lock, Target,
-  ChevronDown, ChevronUp, Calendar, Activity, Compass, Check, Play,
-  QrCode, ArrowUpRight, ChevronRight, PhoneCall, RefreshCw, Calculator,
-  Layers, MapPin, Eye, Volume2, Shield
+  Zap, CheckCircle2, HeartPulse, Sparkles, Award, Coffee, Lock, Target,
+  ChevronDown, ChevronUp, Calendar, Activity, Compass, Check, Play, Pause
 } from 'lucide-react';
 
+import { useApp } from '../context/AppContext';
+
 export default function HomePage({ setActivePage }) {
-  const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'annual'
-  const [selectedDay, setSelectedDay] = useState('Mon');
-  const [selectedZone, setSelectedZone] = useState('powerlifting');
+  const { cmsData } = useApp();
+  const hp = cmsData?.homepage || {};
   const [activeFaq, setActiveFaq] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const heroTiltRef = useRef(null);
 
-  // BMI & Macro Calculator State
-  const [calcHeight, setCalcHeight] = useState(175); // cm
-  const [calcWeight, setCalcWeight] = useState(75); // kg
-  const [calcGoal, setCalcGoal] = useState('muscle'); // 'muscle' | 'fatloss' | 'stamina'
-  const [calcResult, setCalcResult] = useState(null);
-
-  // 3D Mouse Tilt Effect for Hero Card
   const handleMouseMove = (e) => {
     if (!heroTiltRef.current) return;
     const rect = heroTiltRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left - rect.width / 2) / 25;
-    const y = (e.clientY - rect.top - rect.height / 2) / 25;
-    heroTiltRef.current.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg) scale3d(1.015, 1.015, 1.015)`;
+    const x = (e.clientX - rect.left - rect.width / 2) / 22;
+    const y = (e.clientY - rect.top - rect.height / 2) / 22;
+    heroTiltRef.current.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg) scale3d(1.02, 1.02, 1.02)`;
   };
 
   const handleMouseLeave = () => {
@@ -63,6 +55,7 @@ export default function HomePage({ setActivePage }) {
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
     const revealElements = document.querySelectorAll('.scroll-reveal');
+
     revealElements.forEach((el) => observer.observe(el));
 
     return () => {
@@ -70,210 +63,18 @@ export default function HomePage({ setActivePage }) {
     };
   }, []);
 
-  // Calculate BMI & Macros
-  const calculateFitnessPlan = () => {
-    const heightM = calcHeight / 100;
-    const bmi = (calcWeight / (heightM * heightM)).toFixed(1);
-    
-    let calories = 2200;
-    let protein = 150;
-    let planName = 'Pro Athlete VIP';
-
-    if (calcGoal === 'muscle') {
-      calories = Math.round(calcWeight * 33 + 400);
-      protein = Math.round(calcWeight * 2.2);
-      planName = 'Pro Athlete VIP';
-    } else if (calcGoal === 'fatloss') {
-      calories = Math.round(calcWeight * 26 - 350);
-      protein = Math.round(calcWeight * 2.4);
-      planName = 'Pro Athlete VIP';
-    } else {
-      calories = Math.round(calcWeight * 30);
-      protein = Math.round(calcWeight * 2.0);
-      planName = 'Executive Elite';
-    }
-
-    setCalcResult({
-      bmi,
-      calories,
-      protein,
-      planName
-    });
-  };
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Gym Zones Showcase Data
-  const facilityZones = {
-    powerlifting: {
-      name: 'Olympic Powerlifting Arena',
-      desc: '12 Rogue Monster power racks, competition Eleiko barbells, rubber bumper plates up to 150 lbs, and deadlift platforms with bar-path sensors.',
-      image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=80',
-      specs: ['12 Rogue Monster Racks', 'Competition Eleiko Bars', 'Deadlift Platforms', 'Calibrated Steel Plates']
-    },
-    boxing: {
-      name: 'Group HIIT & Combat Ring',
-      desc: 'High-intensity cardiovascular conditioning, spin arena, heavy boxing bags, and metabolic fat-burn group workouts led by champion boxers.',
-      image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1000&q=80',
-      specs: ['Full-Size Boxing Ring', '16 Heavy Punching Bags', 'Concept2 Rowers/SkiErgs', 'Live Heart-Rate Displays']
-    },
-    recovery: {
-      name: 'Infrared Cryotherapy & Spa Suite',
-      desc: 'Infrared saunas, cold plunge recovery pools, and HydroMassage therapy beds for rapid muscle repair and zero post-workout soreness.',
-      image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
-      specs: ['Infrared Dry Saunas', '52°F Cold Plunge Pools', 'HydroMassage Lounge', 'Locker Towel Service']
-    },
-    smartkey: {
-      name: '24/7 Digital Gate & QR Scanner',
-      desc: 'Instant gate entry using your smartphone QR code with automated attendance logging and zero waiting at turnstiles.',
-      image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1000&q=80',
-      specs: ['24/7/365 Gate Access', 'Instant QR Mobile Pass', 'Real-time Attendance Logs', 'High-Security Encryption']
-    }
-  };
-
-  // Facility Features
-  const features = [
-    {
-      icon: Dumbbell,
-      title: 'Olympic Powerlifting Arena',
-      desc: '12 Rogue Monster power racks, competition Eleiko barbell sets, custom rubber dumbbells up to 150 lbs, and deadlift platforms.',
-      badge: 'PRO EQUIPMENT'
-    },
-    {
-      icon: Flame,
-      title: 'Group HIIT & Boxing Studio',
-      desc: 'High-intensity cardiovascular conditioning, spin arena, heavy boxing bags, and metabolic fat-burn group workouts.',
-      badge: 'HIGH ENERGY'
-    },
-    {
-      icon: HeartPulse,
-      title: 'Cryotherapy & Hydro Recovery',
-      desc: 'Infrared saunas, cold plunge recovery pools, and HydroMassage therapy beds for rapid muscle repair and zero soreness.',
-      badge: 'LUXURY RECOVERY'
-    },
-    {
-      icon: QrCode,
-      title: '24/7 Smart Digital QR Keycard',
-      desc: 'Instant gate entry using your smartphone QR code with automated attendance logging and zero waiting at turnstiles.',
-      badge: '24/7 ACCESS'
-    },
-    {
-      icon: Target,
-      title: 'Custom AI Nutrition & Macros',
-      desc: 'Personalized meal plans, macro breakdown algorithms, supplement guidance, and raw protein smoothie lounge.',
-      badge: 'SMART NUTRITION'
-    },
-    {
-      icon: Trophy,
-      title: '1-on-1 Master Coaching',
-      desc: 'CSCS certified elite personal trainers specializing in biomechanics, muscle hypertrophy, and peak athletic performance.',
-      badge: 'ELITE COACHES'
-    }
-  ];
-
-  // Membership Tiers
-  const pricingPlans = [
-    {
-      name: 'Day Pass',
-      priceMonthly: '$15',
-      priceAnnual: '$12',
-      period: 'per day',
-      desc: 'Full 24-hour access pass for travelers and day visitors.',
-      features: [
-        'Single Day 24-Hour Access',
-        'Full Weight Floor & Cardio Floor',
-        'Access to Group HIIT Classes',
-        'Locker Room & Sauna Access',
-        'Digital QR Keycard Pass'
-      ],
-      popular: false,
-      ctaText: 'Get Single Day Pass',
-      page: 'register'
-    },
-    {
-      name: 'Pro Athlete VIP',
-      priceMonthly: '$49',
-      priceAnnual: '$39',
-      period: 'per month',
-      desc: 'Our most popular membership for dedicated fitness enthusiasts.',
-      features: [
-        '24/7/365 Unlimited Gate Access',
-        'Digital QR Keycard in Mobile App',
-        'Unlimited Group Classes (HIIT, Boxing, Yoga)',
-        '1 Free Guest Pass Per Month',
-        'Recovery Suite & Sauna Access',
-        '1-on-1 Fitness Assessment'
-      ],
-      popular: true,
-      ctaText: 'Start 7-Day Free Trial',
-      page: 'register'
-    },
-    {
-      name: 'Executive Elite',
-      priceMonthly: '$89',
-      priceAnnual: '$69',
-      period: 'per month',
-      desc: 'Ultimate VIP all-access package with personal coaching included.',
-      features: [
-        'Everything in Pro Athlete VIP',
-        '4 Monthly 1-on-1 PT Sessions',
-        'Unlimited Cryotherapy & HydroMassage',
-        'Priority Class Reservation',
-        'Custom Macro & Nutrition Plan',
-        'Complimentary VIP Locker Service'
-      ],
-      popular: false,
-      ctaText: 'Join Executive VIP',
-      page: 'register'
-    }
-  ];
-
-  // Schedule Classes
-  const scheduleData = {
-    Mon: [
-      { time: '06:00 AM', name: 'Metabolic HIIT Blast', trainer: 'Elena Rostova', category: 'HIIT', spots: 4 },
-      { time: '09:00 AM', name: 'Olympic Powerlifting Cues', trainer: 'Alex Vance', category: 'Strength', spots: 2 },
-      { time: '05:30 PM', name: 'Heavy Bag Boxing & Cardio', trainer: 'Elena Rostova', category: 'Boxing', spots: 6 },
-      { time: '07:00 PM', name: 'Mobility & Recovery Flow', trainer: 'Dr. Marcus Cole', category: 'Recovery', spots: 8 }
-    ],
-    Tue: [
-      { time: '07:00 AM', name: 'Vinyasa Power Yoga', trainer: 'Sophia Lin', category: 'Yoga', spots: 5 },
-      { time: '10:00 AM', name: 'Hypertrophy Upper Body', trainer: 'Alex Vance', category: 'Strength', spots: 3 },
-      { time: '06:00 PM', name: 'CrossFit WOD Challenge', trainer: 'Marcus Cole', category: 'CrossFit', spots: 2 }
-    ],
-    Wed: [
-      { time: '06:00 AM', name: 'Metabolic HIIT Blast', trainer: 'Elena Rostova', category: 'HIIT', spots: 3 },
-      { time: '12:00 PM', name: 'Core & Endurance Express', trainer: 'Sophia Lin', category: 'Core', spots: 7 },
-      { time: '06:30 PM', name: 'Heavy Bag Boxing & Cardio', trainer: 'Elena Rostova', category: 'Boxing', spots: 4 }
-    ],
-    Thu: [
-      { time: '07:30 AM', name: 'Deadlift & Squat Mechanics', trainer: 'Alex Vance', category: 'Strength', spots: 1 },
-      { time: '05:00 PM', name: 'Functional Fitness Circuit', trainer: 'Dr. Marcus Cole', category: 'Circuit', spots: 5 }
-    ],
-    Fri: [
-      { time: '06:00 AM', name: 'Friday Night Shred HIIT', trainer: 'Elena Rostova', category: 'HIIT', spots: 6 },
-      { time: '05:30 PM', name: 'Powerlifting Max Velocity', trainer: 'Alex Vance', category: 'Strength', spots: 4 }
-    ],
-    Sat: [
-      { time: '08:00 AM', name: 'Weekend Warrior Bootcamp', trainer: 'Elena Rostova', category: 'Bootcamp', spots: 8 },
-      { time: '10:30 AM', name: 'Full Body Mobility Flow', trainer: 'Dr. Marcus Cole', category: 'Recovery', spots: 10 }
-    ],
-    Sun: [
-      { time: '09:00 AM', name: 'Sunday Recovery Cryo & Stretch', trainer: 'Dr. Marcus Cole', category: 'Recovery', spots: 12 }
-    ]
-  };
-
-  // Master Trainers
   const trainers = [
     {
       name: 'Alex Vance',
       role: 'Head Strength & Conditioning Director',
-      credentials: 'B.S. Exercise Science, CSCS, USAW Level 2',
+      credentials: 'B.S. Exercise Science, CSCS, USA Weightlifting Level 2',
       image: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?auto=format&fit=crop&w=400&q=80',
       spec: 'Powerlifting & Biomechanics',
-      bio: 'Over 12 years coaching national powerlifters and collegiate athletes. Specializes in bar-path velocity optimization.'
+      bio: 'Over 12 years experience coaching national powerlifters and collegiate athletes. Alex specializes in bar-path velocity optimization and injury-prevention squat cues.'
     },
     {
       name: 'Elena Rostova',
@@ -281,553 +82,298 @@ export default function HomePage({ setActivePage }) {
       credentials: 'USA Boxing Certified Coach, NASM CPT, FMS Level 2',
       image: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=400&q=80',
       spec: 'Boxing & High-Intensity Conditioning',
-      bio: 'Former competitive boxer and master HIIT instructor. Specializes in explosive power and metabolic fat burn.'
+      bio: 'Former competitive boxer and master HIIT instructor. Elena specializes in explosive power development, speed footwork drills, and metabolic fat-burn protocols.'
     },
     {
       name: 'Dr. Marcus Cole',
       role: 'Physical Therapy & Rehabilitation Director',
       credentials: 'Doctor of Physical Therapy (DPT), CSCS, FRCms',
       image: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
-      spec: 'Post-Rehab & Joint Biomechanics',
-      bio: 'Specializing in orthopedic musculoskeletal therapy, Dr. Marcus oversees strength rehab protocols and joint mobility routines.'
+      spec: 'Post-Rehab & Biomechanics',
+      bio: 'Specializing in orthopedic musculoskeletal therapy, Dr. Marcus oversees our strength rehabilitation protocols and joint mobility routines.'
     }
   ];
 
-  // Success Stories
-  const successStories = [
-    {
-      name: 'Marcus Thorne',
-      duration: '6 Months Program',
-      stats: 'Lost 34 lbs Fat • Gained 12 lbs Muscle',
-      review: 'American Fitness completely transformed my lifestyle. The 24/7 keycard access means I can train at 5 AM before work with zero hassle.',
-      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      rating: 5
-    },
-    {
-      name: 'Sarah Jenkins',
-      duration: '4 Months Program',
-      stats: 'Squat +85 lbs • Deadlift +110 lbs',
-      review: 'The Rogue Monster power racks and coaching from Alex Vance helped me break all my personal strength records safety and consistently.',
-      image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
-      rating: 5
-    },
-    {
-      name: 'David Kalu',
-      duration: '8 Months Program',
-      stats: 'Lost 45 lbs • Body Fat 22% ➔ 11%',
-      review: 'The HIIT classes with Elena Rostova are world class! The digital QR code pass on my phone makes entering the gym seamless.',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-      rating: 5
-    }
-  ];
-
-  // FAQ Items
   const homeFaqs = [
     {
       q: 'How does the encrypted 24/7 digital keycard access work?',
-      a: 'Upon joining, members receive instant digital keycard credentials inside the American Fitness mobile app. Simply tap your phone QR code at our turnstile scanners for secure 24/7/365 facility access, even during off-peak holidays.'
+      a: 'Upon joining, members receive instant digital keycard credentials inside the American Fitness mobile app (as well as an optional physical RFID keycard). Simply tap your phone at our turnstile scanners for secure 24/7/365 facility access, even during off-peak holidays.'
     },
     {
       q: 'What specific equipment is installed on the 20,000 sq. ft. weight floor?',
       a: 'Our main weight arena features 12 Rogue Monster power racks, competition Eleiko barbell sets, custom rubber dumbbells ranging from 5 lbs up to 150 lbs, Woodway slat-belt treadmills, Concept2 rowers/SkiErgs, and Arsenal Strength pin-selected machines.'
     },
     {
-      q: 'Are group fitness classes included in my membership?',
-      a: 'Yes! Both Pro Athlete VIP and Executive Elite plans include 100% unlimited access to all daily group classes (Metabolic HIIT, Heavy Bag Boxing, Power Yoga, Spin, and CrossFit WODs).'
+      q: 'How do the Organic Fuel Bar and nutrition perks work?',
+      a: 'Pro Athlete and VIP Elite members receive discounts and complimentary credits at our on-site Organic Fuel Bar. Enjoy fresh grass-fed whey smoothies, pre-workout energy shots, organic cold brews, and macro-balanced gourmet meal prep containers.'
     },
     {
-      q: 'Can I request a 7-day free trial pass before committing?',
-      a: 'Absolutely! Click the "Claim 7-Day Free VIP Pass" button anywhere on our site to activate your 7-day scannable trial pass immediately.'
+      q: 'Can I claim a free 1-Day Trial Pass before purchasing a membership?',
+      a: 'Yes! Click "Claim Free 1-Day Pass" on our website or mobile app to generate an instant single-day keycard access code and experience our 20,000 sq. ft. facility firsthand.'
     }
   ];
 
   return (
-    <div className="home-page" style={{ position: 'relative', overflowX: 'hidden' }}>
-      
-      {/* Background Ambient Orbs */}
-      <div className="antigravity-hero-bg" />
-      <div className="antigravity-hero-bg-2" />
+    <div style={{ width: '100%', overflowX: 'hidden' }}>
+      {/* 1. Hero Section with Cinematic Anti-Gravity Entrance Animation */}
+      <section className="hero-section-mobile" style={{ position: 'relative', padding: '2.5rem 0 3rem 0', background: 'radial-gradient(circle at 70% 30%, rgba(2,132,199,0.06) 0%, transparent 70%), #ffffff', overflow: 'hidden' }}>
+        {/* Anti-Gravity Ambient Glow Orbs */}
+        <div className="antigravity-hero-bg ag-entrance ag-delay-0" />
+        <div className="antigravity-hero-bg-2 ag-entrance ag-delay-0" />
 
-      {/* SECTION 1: HERO BANNER WITH 3D TILT & LIVE TICKER */}
-      <section className="section-padding hero-section" style={{ paddingTop: '5rem', paddingBottom: '3.5rem', position: 'relative' }}>
-        <div className="container">
-          
-          {/* Live Check-In Ticker Ribbon */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.4rem 1.1rem',
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
-            borderRadius: 'var(--radius-full)',
-            color: '#fbbf24',
-            fontSize: '0.8rem',
-            fontWeight: 800,
-            marginBottom: '1.5rem',
-            boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
-            maxWidth: '100%',
-            overflow: 'hidden'
-          }}>
-            <span className="pulse-beacon" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
-            <span style={{ color: '#6ee7b7' }}>LIVE TICKER:</span>
-            <span style={{ color: '#ffffff', fontWeight: 600 }}>🟢 Member Alex M. checked in at Main Gate • 🟢 Sarah J. booked HIIT Blast</span>
-          </div>
-
-          <div className="grid grid-2" style={{ alignItems: 'center', gap: '3rem' }}>
+        <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '2rem', alignItems: 'stretch' }}>
             
-            {/* Hero Left Content */}
-            <div className="scroll-reveal ag-entrance ag-delay-1">
-              <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, lineHeight: 1.1, fontFamily: 'var(--font-heading)', margin: '0 0 1.25rem 0', color: '#ffffff' }}>
-                BUILD YOUR LEGACY. <br />
-                <span style={{ 
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #38bdf8 100%)', 
-                  WebkitBackgroundClip: 'text', 
-                  WebkitTextFillColor: 'transparent' 
-                }}>
-                  ELEVATE PEAK PERFORMANCE.
-                </span>
-              </h1>
-
-              <p style={{ fontSize: '1.1rem', color: '#cbd5e1', lineHeight: 1.65, maxWidth: '580px', marginBottom: '2rem' }}>
-                Experience 20,000+ sq ft of Olympic powerlifting platforms, AI biomechanics coaching, luxury cryotherapy suites, and instant 24/7 scannable digital keycard access.
-              </p>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
-                <button 
-                  onClick={() => setActivePage('register')}
-                  className="btn btn-primary pulse-button"
-                  style={{ 
-                    padding: '0.95rem 1.8rem', 
-                    fontSize: '1rem', 
-                    fontWeight: 900, 
-                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', 
-                    color: '#ffffff', 
-                    border: 'none', 
-                    borderRadius: 'var(--radius-md)', 
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 25px rgba(217, 119, 6, 0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem'
-                  }}
-                >
-                  <Flame size={20} /> Claim 7-Day Free VIP Pass
-                </button>
-
-                <button 
-                  onClick={() => setActivePage('admin-scanner')}
-                  className="btn glass-card"
-                  style={{ 
-                    padding: '0.95rem 1.5rem', 
-                    fontSize: '0.95rem', 
-                    fontWeight: 800, 
-                    background: 'rgba(255, 255, 255, 0.08)', 
-                    border: '1px solid rgba(245, 158, 11, 0.4)', 
-                    color: '#fbbf24', 
-                    borderRadius: 'var(--radius-md)', 
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                    transition: 'var(--transition-fast)'
-                  }}
-                >
-                  <QrCode size={20} /> 📷 Open QR Scanner
-                </button>
-              </div>
-
-              {/* Live Guarantee Badges */}
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <ShieldCheck size={18} color="#10b981" /> No Contract Required
+            {/* Left Content with Sequential Anti-Gravity Entrance */}
+            <div style={{ textAlign: 'left', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div className="section-tag ag-entrance ag-delay-1" style={{ marginBottom: '0.85rem' }}>
+                  <Flame size={14} /> {hp.welcomeTag || 'Welcome to American Fitness Project'}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Zap size={18} color="#f59e0b" /> Instant App Access
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Award size={18} color="#38bdf8" /> 100% Certified Trainers
+                
+                <h1 className="ag-entrance ag-delay-2" style={{ fontSize: 'clamp(1.75rem, 5.5vw, 3.8rem)', marginBottom: '1rem', lineHeight: '1.18', color: 'var(--text-main)', fontFamily: 'var(--font-heading)', wordBreak: 'break-word' }}>
+                  {hp.headlineMain || 'TRANSFORM YOUR BODY.'} <br />
+                  <span className="gradient-text">{hp.headlineSub || 'UNLEASH YOUR POTENTIAL.'}</span>
+                </h1>
+
+                <p className="ag-entrance ag-delay-3" style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.92rem, 2.4vw, 1.08rem)', marginBottom: '1.5rem', lineHeight: '1.65', maxWidth: '590px' }}>
+                  {hp.description || 'Welcome to American Fitness Project—a 20,000 sq. ft. flagship training facility.'}
+                </p>
+
+                {/* Side-by-Side Action Buttons with Anti-Gravity Rise */}
+                <div className="hero-btn-row ag-entrance ag-delay-4">
+                  <button onClick={() => setActivePage('memberships')} className="btn btn-primary pulse-button">
+                    {hp.ctaText || 'Explore Membership Plans'} <ArrowRight size={15} />
+                  </button>
                 </div>
               </div>
 
+              {/* Animated Infinite Scrolling Feature Highlights Marquee */}
+              <div className="ag-entrance ag-delay-5" style={{ marginTop: '1.5rem', padding: '1rem 0.75rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', overflow: 'hidden' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0284C7', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem', paddingLeft: '0.25rem' }}>
+                  <Sparkles size={14} color="#0284C7" /> FACILITY HIGHLIGHTS & AMENITIES
+                </div>
+                
+                <div className="marquee-container">
+                  <div className="marquee-track">
+                    {(hp.amenities && hp.amenities.length ? [...hp.amenities, ...hp.amenities] : [
+                      { color: '#0284C7', title: '20,000 Sq. Ft. Olympic Arena', text: '12 Rogue Rigs & Eleiko Plates' },
+                      { color: '#0D9488', title: 'Organic Fuel & Smoothie Bar', text: 'Organic Whey & Gourmet Meals' },
+                      { color: '#0891b2', title: '24/7 Mobile Keycard Access', text: 'Open 365 Days a Year' },
+                      { color: '#d97706', title: '4.9 / 5.0 Member Rating', text: 'Over 500+ Verified Reviews' },
+                      { color: '#059669', title: '1-on-1 Master Coaching', text: 'Custom Biomechanics & Plans' }
+                    ]).map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#ffffff', border: '1px solid var(--border-glass)', padding: '0.45rem 0.85rem', borderRadius: 'var(--radius-full)', boxShadow: '0 2px 8px rgba(15,23,42,0.03)', whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                        <CheckCircle2 color={item.color || '#0284C7'} size={16} style={{ flexShrink: 0 }} />
+                        <span style={{ color: 'var(--text-main)' }}><strong>{item.title}:</strong> {item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop/Tablet Checkmarks */}
+              <div className="hero-checkmarks-mobile ag-entrance ag-delay-5" style={{ display: 'flex', gap: '1.5rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                  <CheckCircle2 color="#0284C7" size={17} /> 24/7 Encrypted Mobile Keycard
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                  <CheckCircle2 color="#0D9488" size={17} /> Eleiko Competition Plates & Rigs
+                </div>
+              </div>
             </div>
 
-            {/* Hero Right Interactive 3D Card */}
-            <div 
-              className="scroll-reveal ag-entrance ag-delay-2 ag-tilt-card"
+            {/* Hero Image Card with 3D Tilt Parallax & Zero-Gravity Float */}
+            <div
               ref={heroTiltRef}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
-              style={{ position: 'relative' }}
+              className="hero-image-card scroll-reveal reveal-right ag-entrance ag-delay-6 ag-tilt-card"
+              style={{ position: 'relative', width: '100%', display: 'flex', height: '100%' }}
             >
-              <div className="glass-card" style={{ 
-                padding: '2.5rem', 
-                background: 'radial-gradient(circle at 75% 25%, #1e293b 0%, #0f172a 100%)', 
-                borderRadius: 'var(--radius-lg)', 
-                border: '2px solid rgba(245, 158, 11, 0.4)', 
-                boxShadow: '0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(245, 158, 11, 0.2)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.12em', color: '#f59e0b', textTransform: 'uppercase' }}>
-                    AMERICAN FITNESS ARENA
-                  </div>
-                  <span className="badge badge-gold" style={{ fontSize: '0.75rem' }}>
-                    VIP DIGITAL ACCESS
-                  </span>
-                </div>
-
-                <img 
-                  src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80" 
-                  alt="American Fitness Main Arena"
-                  style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}
-                />
-
-                {/* Hero Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                  <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>15,000+</div>
-                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>Active VIP Members</div>
-                  </div>
-                  <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'var(--font-heading)' }}>20,000 Sq Ft</div>
-                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>Olympic Weight Floor</div>
-                  </div>
-                  <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'var(--font-heading)' }}>50+ Master</div>
-                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>Certified Trainers</div>
-                  </div>
-                  <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#10b981', fontFamily: 'var(--font-heading)' }}>24/7/365</div>
-                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>Digital QR Gate Access</div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2: INTERACTIVE 3D GYM ZONE TOUR SHOWCASE */}
-      <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.8)', borderTop: '1px solid var(--border-glass)' }}>
-        <div className="container">
-          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 2.5rem auto' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              VIRTUAL FACILITY SHOWCASE
-            </span>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              EXPLORE OUR 20,000 SQ FT ARENA ZONES
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.98rem' }}>
-              Tap any facility zone below to inspect specifications, equipment, and recovery amenities.
-            </p>
-          </div>
-
-          {/* Zone Selector Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-            {Object.keys(facilityZones).map((zoneKey) => (
-              <button
-                key={zoneKey}
-                onClick={() => setSelectedZone(zoneKey)}
+              <div
                 style={{
-                  padding: '0.65rem 1.25rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: selectedZone === zoneKey ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
-                  background: selectedZone === zoneKey ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'rgba(15,23,42,0.6)',
-                  color: selectedZone === zoneKey ? '#ffffff' : '#94a3b8',
-                  fontSize: '0.88rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  transition: 'var(--transition-fast)'
+                  position: 'relative',
+                  borderRadius: 'var(--radius-lg)',
+                  overflow: 'hidden',
+                  boxShadow: '0 25px 60px rgba(15, 23, 42, 0.14)',
+                  border: '1px solid var(--border-glass)',
+                  width: '100%',
+                  height: '100%',
+                  minHeight: '100%',
+                  display: 'flex'
                 }}
               >
-                {facilityZones[zoneKey].name}
-              </button>
-            ))}
-          </div>
-
-          {/* Zone Feature Showcase Display */}
-          <div className="glass-card scroll-reveal" style={{
-            padding: '2rem',
-            borderRadius: 'var(--radius-lg)',
-            border: '2px solid rgba(245, 158, 11, 0.4)',
-            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%)'
-          }}>
-            <div className="grid grid-2" style={{ alignItems: 'center', gap: '2rem' }}>
-              <img 
-                src={facilityZones[selectedZone].image}
-                alt={facilityZones[selectedZone].name}
-                style={{ width: '100%', height: '320px', objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.15)' }}
-              />
-
-              <div>
-                <span className="badge badge-gold" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                  FEATURED ARENA ZONE
-                </span>
-                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)', margin: '0.2rem 0 0.85rem 0' }}>
-                  {facilityZones[selectedZone].name}
-                </h3>
-                <p style={{ color: '#cbd5e1', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                  {facilityZones[selectedZone].desc}
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  {facilityZones[selectedZone].specs.map((spec, sIdx) => (
-                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a7f3d0', fontSize: '0.85rem', fontWeight: 700 }}>
-                      <CheckCircle2 size={16} color="#10b981" /> {spec}
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setActivePage('register')}
-                  className="btn btn-primary"
-                  style={{ padding: '0.75rem 1.5rem', fontSize: '0.9rem', fontWeight: 800 }}
-                >
-                  <Eye size={18} /> Schedule In-Person VIP Tour
-                </button>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION 3: INTERACTIVE BMI & MACRO CALCULATOR */}
-      <section className="section-padding" style={{ position: 'relative' }}>
-        <div className="container" style={{ maxWidth: '900px' }}>
-          <div className="glass-card scroll-reveal" style={{
-            padding: '2.5rem',
-            borderRadius: 'var(--radius-lg)',
-            border: '2px solid #38bdf8',
-            background: 'linear-gradient(145deg, rgba(14, 116, 144, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)',
-            boxShadow: '0 15px 40px rgba(56, 189, 248, 0.15)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.9rem', background: 'rgba(56, 189, 248, 0.15)', borderRadius: 'var(--radius-full)', color: '#38bdf8', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-                <Calculator size={16} /> PEAK PERFORMANCE CALCULATOR
-              </div>
-              <h2 style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: '#ffffff', margin: 0 }}>
-                CALCULATE YOUR DAILY MACROS & PLAN
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.35rem' }}>
-                Enter your height, weight, and fitness goal to generate instant personalized daily target calories & macros.
-              </p>
-            </div>
-
-            <div className="grid grid-3" style={{ gap: '1.25rem', marginBottom: '1.75rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#cbd5e1', marginBottom: '0.4rem' }}>
-                  HEIGHT ({calcHeight} cm)
-                </label>
-                <input 
-                  type="range" 
-                  min="140" 
-                  max="210" 
-                  value={calcHeight} 
-                  onChange={(e) => setCalcHeight(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#38bdf8' }}
+                <img
+                  src={hp.heroImage || '/hero-gym-arena.png'}
+                  alt="American Fitness Gym Arena"
+                  style={{ width: '100%', height: '100%', minHeight: '100%', objectFit: 'cover', objectPosition: 'center 35%', display: 'block', flex: 1 }}
                 />
-              </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#cbd5e1', marginBottom: '0.4rem' }}>
-                  WEIGHT ({calcWeight} kg)
-                </label>
-                <input 
-                  type="range" 
-                  min="40" 
-                  max="140" 
-                  value={calcWeight} 
-                  onChange={(e) => setCalcWeight(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#38bdf8' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#cbd5e1', marginBottom: '0.4rem' }}>
-                  PRIMARY GOAL
-                </label>
-                <select
-                  value={calcGoal}
-                  onChange={(e) => setCalcGoal(e.target.value)}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', fontWeight: 700 }}
-                >
-                  <option value="muscle">Muscle Hypertrophy & Strength</option>
-                  <option value="fatloss">Rapid Fat Loss & Toning</option>
-                  <option value="stamina">Athletic Stamina & Endurance</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              onClick={calculateFitnessPlan}
-              className="btn pulse-button"
-              style={{
-                width: '100%',
-                padding: '0.9rem',
-                fontSize: '0.95rem',
-                fontWeight: 900,
-                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(2, 132, 199, 0.4)'
-              }}
-            >
-              <Zap size={18} /> GENERATE MY PEAK FITNESS MACROS
-            </button>
-
-            {calcResult && (
-              <div style={{ marginTop: '1.75rem', padding: '1.5rem', background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(56, 189, 248, 0.4)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', textAlign: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>BMI SCORE</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#38bdf8' }}>{calcResult.bmi}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>DAILY CALORIES TARGET</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fbbf24' }}>{calcResult.calories} kcal</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>DAILY PROTEIN GOAL</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#10b981' }}>{calcResult.protein}g</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>RECOMMENDED MEMBERSHIP</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ffffff', marginTop: '0.35rem' }}>{calcResult.planName}</div>
-                </div>
-              </div>
-            )}
-
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 4: INTERACTIVE MEMBERSHIP PRICING */}
-      <section className="section-padding" style={{ position: 'relative' }}>
-        <div className="container">
-          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 2.5rem auto' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              TRANSPARENT PRICING
-            </span>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              CHOOSE YOUR VIP FITNESS TIER
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.98rem', marginBottom: '1.75rem' }}>
-              No hidden fees, no annual lock-in contracts. Cancel or upgrade anytime with 1-click.
-            </p>
-
-            {/* Billing Cycle Toggle */}
-            <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.5)', padding: '0.3rem', borderRadius: 'var(--radius-full)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <button 
-                onClick={() => setBillingCycle('monthly')}
-                style={{ 
-                  padding: '0.5rem 1.25rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  border: 'none', 
-                  background: billingCycle === 'monthly' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-                  color: billingCycle === 'monthly' ? '#ffffff' : '#94a3b8',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                Monthly Billing
-              </button>
-              <button 
-                onClick={() => setBillingCycle('annual')}
-                style={{ 
-                  padding: '0.5rem 1.25rem', 
-                  borderRadius: 'var(--radius-full)', 
-                  border: 'none', 
-                  background: billingCycle === 'annual' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-                  color: billingCycle === 'annual' ? '#ffffff' : '#94a3b8',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                Annual Billing <span style={{ color: '#10b981', fontWeight: 800 }}>(Save 20%)</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-3" style={{ gap: '2rem', alignItems: 'stretch' }}>
-            {pricingPlans.map((plan, idx) => {
-              const displayPrice = billingCycle === 'annual' ? plan.priceAnnual : plan.priceMonthly;
-              return (
-                <div 
-                  key={idx}
-                  className="glass-card scroll-reveal"
+                {/* Floating Rating Badge with Weightless Float */}
+                <div
+                  className="floating-element ag-floating-element"
                   style={{
-                    padding: '2.25rem',
-                    borderRadius: 'var(--radius-lg)',
-                    border: plan.popular ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.12)',
-                    background: plan.popular ? 'linear-gradient(145deg, rgba(245, 158, 11, 0.1) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'rgba(15, 23, 42, 0.6)',
-                    boxShadow: plan.popular ? '0 15px 40px rgba(245, 158, 11, 0.25)' : 'none',
+                    position: 'absolute',
+                    top: '0.85rem',
+                    right: '0.85rem',
+                    background: 'rgba(255, 255, 255, 0.94)',
+                    backdropFilter: 'blur(12px)',
+                    padding: '0.5rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-glass)',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
                     display: 'flex',
-                    flexDirection: 'column',
-                    justify: 'space-between',
-                    position: 'relative'
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}
                 >
-                  {plan.popular && (
-                    <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)', color: '#ffffff', fontSize: '0.72rem', fontWeight: 900, padding: '0.25rem 0.9rem', borderRadius: 'var(--radius-full)', letterSpacing: '0.08em', boxShadow: '0 4px 15px rgba(245,158,11,0.4)' }}>
-                      MOST POPULAR
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)', marginBottom: '0.35rem' }}>
-                      {plan.name}
-                    </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '0.84rem', minHeight: '40px', marginBottom: '1.25rem' }}>
-                      {plan.desc}
-                    </p>
-
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', marginBottom: '1.75rem' }}>
-                      <span style={{ fontSize: '2.8rem', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
-                        {displayPrice}
-                      </span>
-                      <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{plan.period}</span>
-                    </div>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {plan.features.map((feat, fIdx) => (
-                        <li key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: '#cbd5e1' }}>
-                          <CheckCircle2 size={16} color="#10b981" style={{ flexShrink: 0 }} />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Star size={15} color="#d97706" fill="#d97706" />
                   </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a' }}>4.9 / 5.0 Rating</div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Over 500+ Member Reviews</div>
+                  </div>
+                </div>
 
-                  <button
-                    onClick={() => setActivePage(plan.page)}
-                    className="btn"
-                    style={{
-                      width: '100%',
-                      padding: '0.85rem',
-                      fontSize: '0.92rem',
-                      fontWeight: 800,
-                      background: plan.popular ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'rgba(255, 255, 255, 0.1)',
-                      color: '#ffffff',
-                      border: plan.popular ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer',
-                      boxShadow: plan.popular ? '0 6px 20px rgba(217,119,6,0.35)' : 'none',
-                      transition: 'var(--transition-fast)'
-                    }}
-                  >
-                    {plan.ctaText}
-                  </button>
+                {/* Floating 24/7 Access Badge with Reverse Weightless Float */}
+                <div
+                  className="floating-element ag-floating-element-alt"
+                  style={{
+                    position: 'absolute',
+                    bottom: '0.85rem',
+                    left: '0.85rem',
+                    background: 'rgba(255, 255, 255, 0.94)',
+                    backdropFilter: 'blur(12px)',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-glass)',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--gradient-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Clock size={16} color="#ffffff" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a' }}>24/7 VIP Access</div>
+                    <div style={{ fontSize: '0.68rem', color: '#0D9488', fontWeight: 700 }}>Open 365 Days a Year</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Stat Counters Row with Anti-Gravity Rise Entrance */}
+          <div
+            className="glass-card hero-stats-container scroll-reveal reveal-scale ag-entrance ag-delay-7"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: '1rem',
+              padding: '1.5rem 1rem',
+              marginTop: '2.5rem'
+            }}
+          >
+            {[
+              { label: 'Active Members', value: '2,500+', icon: Users, color: '#0284C7' },
+              { label: 'Sq. Ft. Facility', value: '20,000', icon: Trophy, color: '#0D9488' },
+              { label: 'Modern Rigs', value: '100+', icon: Zap, color: 'var(--accent-green)' },
+              { label: '24/7 Access', value: '365 Days', icon: Clock, color: 'var(--accent-cyan)' }
+            ].map((stat, idx) => {
+              const Icon = stat.icon;
+              return (
+                <div key={idx} style={{ textAlign: 'center' }}>
+                  <Icon size={20} color={stat.color} style={{ marginBottom: '0.2rem' }} />
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: 'clamp(1.35rem, 3.8vw, 1.8rem)', color: 'var(--text-main)' }}>{stat.value}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{stat.label}</div>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* 2. Redesigned Why Choose Us (Equal Height Cards with Header Icon + Title) */}
+      <section style={{ padding: '3.5rem 0', background: '#ffffff', borderTop: '1px solid var(--border-glass)' }}>
+        <div className="container">
+          <div className="section-header scroll-reveal">
+            <span className="section-tag">Elite Infrastructure</span>
+            <h2 className="section-title">WHY CHOOSE <span className="gradient-text">AMERICAN FITNESS GYM</span></h2>
+            <p className="section-subtitle">Engineered specifically for powerlifters, endurance athletes, bodybuilders, and fitness enthusiasts seeking an uncompromised training environment.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.25rem' }}>
+            {[
+              {
+                icon: Dumbbell,
+                color: '#0284C7',
+                title: 'Rogue Olympic Weight Floor',
+                desc: '12 dedicated powerlifting platforms with Rogue Westside racks, Eleiko calibrated steel plates, and custom urethane dumbbells ranging from 5 lbs to 150 lbs.'
+              },
+              {
+                icon: Trophy,
+                color: '#0D9488',
+                title: '1-on-1 Master Coaching',
+                desc: 'Work directly with certified strength biomechanics specialists to optimize your lifting form, progressive overload, and personalized nutrition plans.'
+              },
+              {
+                icon: Clock,
+                color: '#0891b2',
+                title: '24/7 Encrypted App Access',
+                desc: 'Never let restricted gym hours slow your progress. Enjoy instant 1-tap mobile keycard entry through encrypted turnstiles 365 days a year.'
+              },
+              {
+                icon: Coffee,
+                color: '#d97706',
+                title: 'Fuel Bar Smoothies & Espresso',
+                desc: 'Recharge post-workout with organic whey protein shakes, BCAA refreshers, organic cold brew coffee, and macro-balanced meal prep containers.'
+              },
+              {
+                icon: Lock,
+                color: '#059669',
+                title: 'Luxury Private Lockers & Spa',
+                desc: 'Pristine locker room facilities equipped with digital combination keyless lockers, high-pressure rainfall showers, and complimentary plush towel service.'
+              },
+              {
+                icon: Target,
+                color: '#0284C7',
+                title: 'InBody 770 Body Composition',
+                desc: 'Track exact muscle mass gains and body fat loss with clinical-grade InBody 770 bioimpedance analysis and 1-on-1 certified coaching guidance.'
+              }
+            ].map((pillar, i) => {
+              const Icon = pillar.icon;
+              return (
+                <div
+                  key={i}
+                  className={`glass-card glass-card-glow scroll-reveal stagger-${(i % 6) + 1}`}
+                  style={{
+                    padding: '1.35rem 1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-glass)',
+                    background: '#ffffff',
+                    boxShadow: '0 4px 15px rgba(15,23,42,0.04)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.85rem' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(2,132,199,0.12) 0%, rgba(13,148,136,0.12) 100%)', border: '1px solid rgba(2,132,199,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={22} color={pillar.color} />
+                    </div>
+                    <h3 style={{ fontSize: '1.1rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)', margin: 0, lineHeight: 1.25 }}>
+                      {pillar.title}
+                    </h3>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: '1.55', margin: 0, flex: 1 }}>
+                    {pillar.desc}
+                  </p>
                 </div>
               );
             })}
@@ -835,146 +381,104 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 5: LIVE CLASS SCHEDULE MATRIX */}
-      <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.7)', borderTop: '1px solid var(--border-glass)' }}>
+      {/* 3. Facility Highlights Teaser */}
+      <section style={{ padding: '3.5rem 0', background: 'var(--bg-card)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
-          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 2rem auto' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              DAILY GROUP CLASSES
-            </span>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              WEEKLY LIVE TRAINING SCHEDULE
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.98rem' }}>
-              Select any day of the week to view live classes and reserve your spot instantly.
-            </p>
+          <div className="section-header scroll-reveal">
+            <span className="section-tag">World-Class Equipment</span>
+            <h2 className="section-title">PREMIER <span className="gradient-text">TRAINING FACILITY</span></h2>
+            <p className="section-subtitle">Inspect our Olympic weightlifting platforms, Woodway cardio deck, and organic fuel bar.</p>
           </div>
 
-          {/* Day Selector Tabs */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-            {Object.keys(scheduleData).map((day) => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                style={{
-                  padding: '0.6rem 1.4rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: selectedDay === day ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
-                  background: selectedDay === day ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'rgba(15,23,42,0.6)',
-                  color: selectedDay === day ? '#ffffff' : '#94a3b8',
-                  fontSize: '0.9rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                {day}
-              </button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
+            {(cmsData?.services || []).slice(0, 3).map((f, i) => (
+              <div key={i} className={`glass-card glass-card-glow scroll-reveal stagger-${i + 1}`} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ height: '200px', position: 'relative', overflow: 'hidden' }}>
+                  <img src={f.image} alt={f.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <span className="badge badge-gold" style={{ position: 'absolute', top: '0.85rem', left: '0.85rem', background: '#ffffff' }}>{f.badge}</span>
+                </div>
+                <div style={{ padding: '1.35rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.4rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>{f.title}</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: '1.6' }}>{f.description || f.desc}</p>
+                </div>
+              </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Schedule Cards Grid */}
-          <div className="grid grid-2" style={{ gap: '1.25rem' }}>
-            {scheduleData[selectedDay].map((cls, cIdx) => (
-              <div 
-                key={cIdx}
-                className="glass-card scroll-reveal"
-                style={{
-                  padding: '1.25rem 1.5rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  flexWrap: 'wrap'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ padding: '0.65rem 0.9rem', background: 'rgba(245, 158, 11, 0.15)', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24', fontSize: '0.85rem', fontWeight: 800, textAlign: 'center' }}>
-                    <Clock size={16} style={{ marginBottom: '0.15rem' }} />
-                    <div>{cls.time}</div>
-                  </div>
+      {/* 4. Certified Master Coaches */}
+      <section style={{ padding: '3.5rem 0', background: '#ffffff', borderTop: '1px solid var(--border-glass)' }}>
+        <div className="container">
+          <div className="section-header scroll-reveal">
+            <span className="section-tag">Expert Leadership</span>
+            <h2 className="section-title">CERTIFIED <span className="gradient-text">MASTER COACHES</span></h2>
+            <p className="section-subtitle">Work directly with elite exercise specialists dedicated to optimizing your strength and biomechanics.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
+            {trainers.map((t, idx) => (
+              <div key={idx} className={`glass-card scroll-reveal stagger-${idx + 1}`} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ height: '230px', overflow: 'hidden' }}>
+                  <img src={t.image} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ padding: '1.35rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>{t.name}</h3>
+                  <div style={{ fontSize: '0.82rem', color: '#0284C7', fontWeight: 700, marginBottom: '0.5rem' }}>{t.role}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}><strong>Certifications:</strong> {t.credentials}</div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1rem', flex: 1 }}>{t.bio}</p>
+                  <span className="badge badge-gold" style={{ alignSelf: 'flex-start' }}>{t.spec}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Member Transformations */}
+      <section style={{ padding: '3.5rem 0', background: 'var(--bg-card)', borderTop: '1px solid var(--border-glass)' }}>
+        <div className="container">
+          <div className="section-header scroll-reveal">
+            <span className="section-tag">Verified Results</span>
+            <h2 className="section-title">REAL MEMBERS. <span className="gradient-text">REAL TRANSFORMATIONS.</span></h2>
+            <p className="section-subtitle">Read firsthand experiences from members who transformed their health and physique at American Fitness Gym.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
+            {[
+              {
+                name: 'Daniel Carter',
+                result: 'Lost 35 lbs & Built 12 lbs Lean Muscle (6 Months)',
+                quote: 'The 24/7 keycard access allowed me to execute my powerlifting workouts before my 7 AM work shifts. The Rogue rigs and Eleiko plates are top tier.',
+                stars: 5,
+                image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80'
+              },
+              {
+                name: 'Samantha Reed',
+                result: 'Increased Deadlift by 110 lbs (1 Year)',
+                quote: 'The coaching team corrected my barbell squat path within my first month. Plus having unlimited access to the cedarwood sauna and cold plunge made recovery a breeze.',
+                stars: 5,
+                image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+              },
+              {
+                name: 'Marcus Brody',
+                result: 'Reduced Body Fat from 24% to 11% (8 Months)',
+                quote: 'Consistent access to the Woodway cardio deck and InBody 770 tracking helped me break a 3-year plateau. Hands down the best gym facility in the region.',
+                stars: 5,
+                image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80'
+              }
+            ].map((story, i) => (
+              <div key={i} className={`glass-card scroll-reveal stagger-${i + 1}`} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', gap: '0.2rem', color: 'var(--accent-gold)', marginBottom: '0.75rem' }}>
+                  {[...Array(story.stars)].map((_, s) => <Star key={s} size={15} fill="var(--accent-gold)" />)}
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', fontStyle: 'italic', marginBottom: '1.1rem', lineHeight: '1.6', flex: 1 }}>"{story.quote}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderTop: '1px solid var(--border-glass)', paddingTop: '0.75rem' }}>
+                  <img src={story.image} alt={story.name} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
                   <div>
-                    <span className="badge badge-gold" style={{ fontSize: '0.68rem', marginBottom: '0.2rem' }}>
-                      {cls.category}
-                    </span>
-                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', margin: '0.1rem 0' }}>
-                      {cls.name}
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#94a3b8' }}>
-                      Trainer: <strong style={{ color: '#cbd5e1' }}>{cls.trainer}</strong> • <span style={{ color: '#10b981', fontWeight: 700 }}>{cls.spots} Spots Left</span>
-                    </p>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>{story.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 600 }}>{story.result}</div>
                   </div>
-                </div>
-
-                <button
-                  onClick={() => setActivePage('classes')}
-                  className="btn"
-                  style={{
-                    padding: '0.55rem 1.1rem',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(245, 158, 11, 0.4)',
-                    color: '#fbbf24',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Book Class
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 6: MASTER TRAINERS */}
-      <section className="section-padding" style={{ position: 'relative' }}>
-        <div className="container">
-          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 3rem auto' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              EXPERT COACHES
-            </span>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              MEET OUR PERFORMANCE DIRECTORS
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.98rem' }}>
-              CSCS certified master trainers dedicated to personalizing your training and maximizing your results.
-            </p>
-          </div>
-
-          <div className="grid grid-3" style={{ gap: '2rem' }}>
-            {trainers.map((tr, tIdx) => (
-              <div 
-                key={tIdx}
-                className="glass-card scroll-reveal"
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: 'transform 0.3s ease'
-                }}
-              >
-                <img 
-                  src={tr.image} 
-                  alt={tr.name} 
-                  style={{ width: '100%', height: '260px', objectFit: 'cover' }}
-                />
-                <div style={{ padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    {tr.role}
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffffff', margin: '0.25rem 0 0.5rem 0' }}>
-                    {tr.name}
-                  </h3>
-                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 700, marginBottom: '0.75rem' }}>
-                    {tr.credentials}
-                  </div>
-                  <p style={{ color: '#94a3b8', fontSize: '0.84rem', lineHeight: 1.5, margin: 0 }}>
-                    {tr.bio}
-                  </p>
                 </div>
               </div>
             ))}
@@ -982,205 +486,151 @@ export default function HomePage({ setActivePage }) {
         </div>
       </section>
 
-      {/* SECTION 7: CLIENT TRANSFORMATIONS & REVIEWS */}
-      <section className="section-padding" style={{ background: 'rgba(15, 23, 42, 0.7)', borderTop: '1px solid var(--border-glass)' }}>
+      {/* 5. DYNAMIC MEMBERSHIP PLANS PREVIEW (Live CMS Data) */}
+      <section style={{ padding: '4rem 0', background: 'var(--bg-card)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
-          <div className="text-center scroll-reveal" style={{ maxWidth: '650px', margin: '0 auto 3rem auto' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              REAL RESULTS
-            </span>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              MEMBER SUCCESS STORIES
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.98rem' }}>
-              Read verified feedback from athletes who transformed their bodies and lives at American Fitness.
-            </p>
+          <div className="section-header scroll-reveal">
+            <span className="section-tag">Flexible Membership Options</span>
+            <h2 className="section-title">FEATURED <span className="gradient-text">MEMBERSHIP PLANS</span></h2>
+            <p className="section-subtitle">Real-time dynamic pricing managed directly by gym administration. Choose your preferred plan to begin training.</p>
           </div>
 
-          <div className="grid grid-3" style={{ gap: '2rem' }}>
-            {successStories.map((story, sIdx) => (
-              <div 
-                key={sIdx}
-                className="glass-card scroll-reveal"
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.75rem' }}>
+            {(cmsData?.memberships || []).map((plan) => (
+              <div
+                key={plan.id}
+                className="glass-card glass-card-glow scroll-reveal"
                 style={{
-                  padding: '2rem',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '2rem 1.5rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  justify: 'space-between'
+                  borderRadius: 'var(--radius-lg)',
+                  border: plan.popular ? '2px solid #0284C7' : '1px solid var(--border-glass)',
+                  background: '#ffffff',
+                  position: 'relative'
                 }}
               >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <img 
-                      src={story.image} 
-                      alt={story.name} 
-                      style={{ width: '54px', height: '54px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #f59e0b' }}
-                    />
-                    <div>
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-                        {story.name}
-                      </h4>
-                      <div style={{ fontSize: '0.78rem', color: '#f59e0b', fontWeight: 700 }}>
-                        {story.duration}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.2rem', marginBottom: '0.85rem' }}>
-                    {[...Array(story.rating)].map((_, i) => (
-                      <Star key={i} size={16} color="#fbbf24" fill="#fbbf24" />
-                    ))}
-                  </div>
-
-                  <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.6, fontStyle: 'italic', marginBottom: '1.25rem' }}>
-                    "{story.review}"
-                  </p>
-                </div>
-
-                <div style={{ padding: '0.5rem 0.85rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', color: '#a7f3d0', fontSize: '0.78rem', fontWeight: 800, textAlign: 'center' }}>
-                  ⚡ {story.stats}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 8: FAQ ACCORDION */}
-      <section className="section-padding">
-        <div className="container" style={{ maxWidth: '800px' }}>
-          <div className="text-center scroll-reveal" style={{ marginBottom: '2.5rem' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              FREQUENTLY ASKED QUESTIONS
-            </span>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', marginTop: '0.35rem', color: '#ffffff' }}>
-              GOT QUESTIONS? WE HAVE ANSWERS.
-            </h2>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {homeFaqs.map((faq, fIdx) => (
-              <div 
-                key={fIdx}
-                className="glass-card scroll-reveal"
-                style={{
-                  borderRadius: 'var(--radius-md)',
-                  border: activeFaq === fIdx ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
-                  overflow: 'hidden',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                <button
-                  onClick={() => setActiveFaq(activeFaq === fIdx ? null : fIdx)}
-                  style={{
-                    width: '100%',
-                    padding: '1.25rem 1.5rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    fontWeight: 800,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span>{faq.q}</span>
-                  {activeFaq === fIdx ? <ChevronUp size={20} color="#f59e0b" /> : <ChevronDown size={20} color="#94a3b8" />}
-                </button>
-
-                {activeFaq === fIdx && (
-                  <div style={{ padding: '0 1.5rem 1.25rem 1.5rem', color: '#cbd5e1', fontSize: '0.9rem', lineHeight: 1.65, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
-                    {faq.a}
-                  </div>
+                {plan.popular && (
+                  <span className="badge badge-gold" style={{ position: 'absolute', top: '1rem', right: '1rem', background: '#0284C7', color: '#ffffff', fontWeight: 800 }}>
+                    MOST POPULAR
+                  </span>
                 )}
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284C7', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{plan.badge}</span>
+                <h3 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)', marginBottom: '0.4rem' }}>{plan.name}</h3>
+                
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.75rem 0' }}>
+                  <span style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>
+                    ${plan.monthlyPrice}
+                  </span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/ month</span>
+                </div>
+
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '1.25rem' }}>{plan.description}</p>
+
+                <div style={{ flex: 1, marginBottom: '1.5rem' }}>
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {(plan.features || []).map((feat, fIdx) => (
+                      <li key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.84rem', color: 'var(--text-main)' }}>
+                        <Check size={16} color="#0284C7" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => setActivePage('memberships')}
+                  className={plan.popular ? "btn btn-primary" : "btn btn-secondary"}
+                  style={{ width: '100%', height: '44px', fontSize: '0.9rem' }}
+                >
+                  {plan.ctaText || 'Select Plan'} <ArrowRight size={16} />
+                </button>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* SECTION 9: FULL-WIDTH CTA FOOTER BANNER */}
-      <section className="section-padding" style={{ paddingBottom: '5rem' }}>
-        <div className="container">
-          <div className="glass-card scroll-reveal" style={{
-            padding: '3.5rem 2rem',
-            borderRadius: 'var(--radius-lg)',
-            background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%)',
-            border: '2px solid #f59e0b',
-            textAlign: 'center',
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: '0 20px 50px rgba(245, 158, 11, 0.2)'
-          }}>
-            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.9rem', background: 'rgba(255,255,255,0.1)', borderRadius: 'var(--radius-full)', color: '#fbbf24', fontSize: '0.8rem', fontWeight: 800, marginBottom: '1rem' }}>
-                <Sparkles size={16} /> READY TO UNLOCK YOUR POTENTIAL?
-              </div>
-              <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, fontFamily: 'var(--font-heading)', color: '#ffffff', marginBottom: '1rem' }}>
-                START YOUR 7-DAY FREE TRIAL TODAY
-              </h2>
-              <p style={{ color: '#cbd5e1', fontSize: '1rem', marginBottom: '2rem' }}>
-                Get instant scannable digital keycard pass credentials on your phone. Zero waiting, zero commitment.
-              </p>
+      {/* 6. Home Page FAQ Accordion */}
+      <section style={{ padding: '3.5rem 0', background: '#ffffff', borderTop: '1px solid var(--border-glass)' }}>
+        <div className="container" style={{ maxWidth: '840px' }}>
+          <div className="section-header scroll-reveal">
+            <span className="section-tag">Frequently Asked Questions</span>
+            <h2 className="section-title">EVERYTHING YOU <span className="gradient-text">NEED TO KNOW</span></h2>
+          </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => setActivePage('register')}
-                  className="btn btn-primary pulse-button"
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {homeFaqs.map((faq, idx) => {
+              const isOpen = activeFaq === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`glass-card scroll-reveal stagger-${(idx % 4) + 1}`}
+                  onClick={() => setActiveFaq(isOpen ? null : idx)}
                   style={{
-                    padding: '1rem 2.2rem',
-                    fontSize: '1.05rem',
-                    fontWeight: 900,
-                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: 'var(--radius-md)',
+                    padding: '1.15rem 1.35rem',
                     cursor: 'pointer',
-                    boxShadow: '0 8px 25px rgba(217,119,6,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
+                    borderRadius: 'var(--radius-md)',
+                    border: isOpen ? '1.5px solid #0284C7' : '1px solid var(--border-glass)'
                   }}
                 >
-                  Claim 7-Day Free Trial Pass <ArrowRight size={20} />
-                </button>
-              </div>
-            </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.85rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.98rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+                      {faq.q}
+                    </span>
+                    {isOpen ? <ChevronUp size={18} color="#0284C7" /> : <ChevronDown size={18} color="var(--text-muted)" />}
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: '1.65', borderTop: '1px solid var(--border-glass)', paddingTop: '0.75rem' }}>
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* FLOATING SCROLL TO TOP BUTTON */}
+      {/* 7. Final Call to Action */}
+      <section style={{ padding: '4rem 0', background: 'var(--gradient-primary)', textAlign: 'center' }}>
+        <div className="container scroll-reveal reveal-scale">
+          <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.5rem)', color: '#fff', marginBottom: '0.75rem', fontFamily: 'var(--font-heading)' }}>READY TO BEGIN YOUR FITNESS JOURNEY?</h2>
+          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 'clamp(0.95rem, 2.4vw, 1.15rem)', maxWidth: '650px', margin: '0 auto 1.5rem auto' }}>
+            Join American Fitness Gym today and gain immediate 24/7 access to our Rogue weight floor, Woodway cardio deck, 1-on-1 master coaching, and organic fuel smoothie bar.
+          </p>
+          <button onClick={() => setActivePage('memberships')} className="btn btn-gold" style={{ padding: '0.8rem 1.8rem', fontSize: '1rem', height: '46px' }}>
+            View Membership Plans <ArrowRight size={17} />
+          </button>
+        </div>
+      </section>      {/* Scroll Back to Top Button */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
+          className="floating-scroll-top"
           style={{
             position: 'fixed',
-            bottom: '5rem',
-            right: '1.5rem',
-            width: '46px',
-            height: '46px',
+            bottom: '2.5rem',
+            right: '2rem',
+            zIndex: 99,
+            width: '44px',
+            height: '44px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+            background: 'var(--gradient-primary)',
             color: '#ffffff',
             border: 'none',
-            boxShadow: '0 6px 20px rgba(217,119,6,0.4)',
-            cursor: 'pointer',
+            boxShadow: '0 8px 25px rgba(2, 132, 199, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 99
+            cursor: 'pointer',
+            transition: 'var(--transition-normal)'
           }}
+          title="Scroll Back to Top"
         >
           <ChevronUp size={24} />
         </button>
       )}
-
     </div>
   );
 }

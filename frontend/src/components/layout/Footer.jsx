@@ -1,26 +1,15 @@
-import React, { useState } from 'react';
-import { MapPin, Phone, Mail, Clock, Send, Instagram, Facebook, Youtube, Twitter } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import React from 'react';
+import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Youtube, Twitter } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 
 export default function Footer({ setActivePage }) {
-  const [email, setEmail] = useState('');
-  const { showToast } = useApp();
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (!email) return;
-    showToast('Subscribed! Check your inbox for exclusive workout guides.', 'success');
-    setEmail('');
-  };
-
   return (
     <footer style={{ background: 'var(--bg-card)', borderTop: '1px solid var(--border-glass)', paddingTop: '4rem', paddingBottom: '2rem' }}>
       <div className="container">
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))',
             gap: '3rem',
             marginBottom: '3.5rem'
           }}
@@ -91,7 +80,7 @@ export default function Footer({ setActivePage }) {
 
           {/* Location & Hours */}
           <div>
-            <h4 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>Facility Details</h4>
+            <h4 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>Contact Details</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                 <MapPin size={20} color="#0284C7" style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -110,36 +99,6 @@ export default function Footer({ setActivePage }) {
                 <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>Open 24 Hours / 7 Days a Week</span>
               </div>
             </div>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h4 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>Join The Athlete Newsletter</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-              Get weekly workout split routines, nutritional recipes, and exclusive member perks directly in your inbox.
-            </p>
-            <form onSubmit={handleSubscribe} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <input
-                type="email"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.8rem 1rem',
-                  borderRadius: 'var(--radius-sm)',
-                  background: '#ffffff',
-                  border: '1px solid var(--border-glass)',
-                  color: 'var(--text-main)',
-                  outline: 'none',
-                  fontSize: '0.95rem'
-                }}
-              />
-              <button type="submit" className="btn btn-primary" style={{ borderRadius: 'var(--radius-sm)' }}>
-                <Send size={16} /> Subscribe Now
-              </button>
-            </form>
           </div>
         </div>
 

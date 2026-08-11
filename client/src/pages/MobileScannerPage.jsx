@@ -3,19 +3,55 @@ import jsQR from 'jsqr';
 import { 
   Camera, QrCode, ShieldCheck, XCircle, AlertTriangle, CheckCircle2, 
   Clock, User, Search, Sparkles, RefreshCw, Volume2, VolumeX, 
-  History, Smartphone, Lock, ArrowRight, Zap, Check, Users, DollarSign,
-  UserCheck, UserX, Calendar, Filter, Image as ImageIcon
+  History, Smartphone, Lock, ArrowRight, ArrowLeft, LogOut, Zap, Check, Users, DollarSign,
+  UserCheck, UserX, Calendar, Filter, Image as ImageIcon, Send, CheckCheck, MessageSquare
 } from 'lucide-react';
 import { 
   verifyMemberQR, fetchAttendanceLogs, fetchAdminAnalytics, 
-  fetchAdminMembers, renewMemberSubscription, generateMemberQRToken 
+  fetchAdminMembers, renewMemberSubscription, generateMemberQRToken, sendExpiryNotice 
 } from '../services/api';
 import { useApp } from '../context/AppContext';
 import QRCodeSVG from '../components/common/QRCodeSVG';
 
 export default function MobileScannerPage({ setActivePage }) {
-  const { user, showToast } = useApp();
-  const [activeAdminTab, setActiveAdminTab] = useState('dashboard'); // 'dashboard' | 'scanner' | 'members' | 'attendance'
+  const { 
+    user, setUser, showToast, cmsData, updateHomepageCMS, 
+    saveServiceCMS, deleteServiceCMS, saveMembershipCMS, deleteMembershipCMS, logoutSession 
+  } = useApp();
+  const [activeAdminTab, setActiveAdminTab] = useState('dashboard'); // 'dashboard' | 'scanner' | 'members' | 'attendance' | 'cms'
+  const [cmsSubTab, setCmsSubTab] = useState('homepage'); // 'homepage' | 'services' | 'memberships'
+
+  // Homepage Form State
+  const [hpForm, setHpForm] = useState({
+    welcomeTag: cmsData?.homepage?.welcomeTag || '',
+    headlineMain: cmsData?.homepage?.headlineMain || '',
+    headlineSub: cmsData?.homepage?.headlineSub || '',
+    description: cmsData?.homepage?.description || '',
+    heroImage: cmsData?.homepage?.heroImage || '',
+    ctaText: cmsData?.homepage?.ctaText || ''
+  });
+
+  useEffect(() => {
+    if (cmsData?.homepage) {
+      setHpForm({
+        welcomeTag: cmsData.homepage.welcomeTag || '',
+        headlineMain: cmsData.homepage.headlineMain || '',
+        headlineSub: cmsData.homepage.headlineSub || '',
+        description: cmsData.homepage.description || '',
+        heroImage: cmsData.homepage.heroImage || '',
+        ctaText: cmsData.homepage.ctaText || ''
+      });
+    }
+  }, [cmsData]);
+
+  // Service Edit Modal State
+  const [editingService, setEditingService] = useState(null);
+  const [serviceModalOpen, setServiceModalOpen] = useState(false);
+
+  // Membership Edit Modal State
+  const [editingMembership, setEditingMembership] = useState(null);
+  const [membershipModalOpen, setMembershipModalOpen] = useState(false);
+
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
@@ -26,21 +62,23 @@ export default function MobileScannerPage({ setActivePage }) {
 
   // Analytics & Admin Member Management State
   const [analytics, setAnalytics] = useState({
-    totalMembers: 148,
-    activeMembers: 132,
-    expiredMembers: 16,
-    todayAttendance: 42,
-    monthlyRevenue: 14850
+    totalMembers: 0,
+    activeMembers: 0,
+    expiredMembers: 0,
+    todayAttendance: 0,
+    monthlyRevenue: 0
   });
   const [membersList, setMembersList] = useState([]);
   const [memberFilter, setMemberFilter] = useState('all'); // 'all' | 'active' | 'expired'
   const [memberSearch, setMemberSearch] = useState('');
   const [generatedQRModal, setGeneratedQRModal] = useState(null);
+  const [noticeModalData, setNoticeModalData] = useState(null);
+  const [userDashboardPreviewModal, setUserDashboardPreviewModal] = useState(null);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
-  const canvasRef = useRef(typeof document !== 'undefined' ? document.createElement('canvas') : null);
+  const canvasRef = useRef(document.createElement('canvas'));
   const lastScannedCodeRef = useRef(null);
   const scanDebounceTimerRef = useRef(null);
   const resultCardRef = useRef(null);
@@ -214,13 +252,12 @@ export default function MobileScannerPage({ setActivePage }) {
         }
 
         // 2. Dual Pass jsQR: Center Box Crop + Full Frame Scan
-        if (!scannedText && canvas) {
+        if (!scannedText) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          // Pass 2A: Center 60% Crop Scan (Targeted for "ALIGN QR CODE HERE" yellow box)
           const cropW = Math.floor(canvas.width * 0.6);
           const cropH = Math.floor(canvas.height * 0.6);
           const cropX = Math.floor((canvas.width - cropW) / 2);
@@ -236,7 +273,6 @@ export default function MobileScannerPage({ setActivePage }) {
             }
           } catch (e) {}
 
-          // Pass 2B: Full Frame Scan if center crop didn't find anything
           if (!scannedText) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height, {
@@ -252,7 +288,6 @@ export default function MobileScannerPage({ setActivePage }) {
           lastScannedCodeRef.current = scannedText;
           handleVerify(scannedText);
 
-          // Debounce same code for 3.5 seconds
           if (scanDebounceTimerRef.current) clearTimeout(scanDebounceTimerRef.current);
           scanDebounceTimerRef.current = setTimeout(() => {
             lastScannedCodeRef.current = null;
@@ -402,207 +437,171 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   };
 
-  return (
+   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(circle at 50% 10%, #1e293b 0%, #090d16 80%)',
-      color: '#f8fafc',
-      paddingBottom: '5rem',
-      fontFamily: 'var(--font-body)'
+      background: '#f8fafc',
+      color: '#0f172a',
+      fontFamily: 'var(--font-body)',
+      display: 'flex',
+      flexDirection: 'row'
     }}>
-      {/* Mobile Scanner Sticky Top Header */}
-      <div style={{
+      {/* 1. Modern Left Sidebar Navigation (White Theme) */}
+      <aside className="admin-sidebar" style={{
+        width: '260px',
+        minWidth: '260px',
+        background: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        boxShadow: '4px 0 25px rgba(0, 0, 0, 0.03)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '1.5rem 1rem',
         position: 'sticky',
         top: 0,
+        height: '100vh',
         zIndex: 100,
-        background: 'rgba(9, 13, 22, 0.92)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(217, 119, 6, 0.25)',
-        padding: '0.9rem 1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
+        flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 15px rgba(217, 119, 6, 0.4)'
-          }}>
-            <QrCode size={20} color="#ffffff" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)', letterSpacing: '0.03em' }}>
-              MOBILE QR SCANNER
-            </h1>
-            <div style={{ fontSize: '0.72rem', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-              <ShieldCheck size={13} /> ADMIN VERIFICATION GATEWAY
+        <div>
+          {/* Sidebar Header Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)'
+            }}>
+              <QrCode size={20} color="#ffffff" />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1rem', margin: 0, fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)', letterSpacing: '0.02em' }}>
+                AMERICAN FITNESS
+              </h1>
+              <div style={{ fontSize: '0.68rem', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 700 }}>
+                <ShieldCheck size={12} /> ADMIN PORTAL
+              </div>
             </div>
           </div>
+
+          {/* Navigation Links */}
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', paddingLeft: '0.6rem' }}>
+            MAIN MENU
+          </div>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {[
+              { id: 'dashboard', label: 'Overview', icon: ShieldCheck },
+              { id: 'scanner', label: 'QR Scanner', icon: QrCode },
+              { id: 'members', label: `Members (${membersList.length})`, icon: Users },
+              { id: 'attendance', label: 'Attendance', icon: Clock },
+              { id: 'cms', label: 'CMS Manager', icon: Sparkles }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeAdminTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveAdminTab(tab.id)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: isActive ? '1px solid #0284c7' : '1px solid transparent',
+                    background: isActive ? 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%)' : 'transparent',
+                    color: isActive ? '#0284c7' : '#475569',
+                    fontWeight: isActive ? 800 : 600,
+                    fontSize: '0.86rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Icon size={18} color={isActive ? '#0284c7' : '#64748b'} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <button
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          style={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            color: soundEnabled ? '#fbbf24' : '#94a3b8',
-            padding: '0.45rem 0.75rem',
-            borderRadius: 'var(--radius-full)',
-            fontSize: '0.78rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            cursor: 'pointer'
-          }}
-          title="Toggle Scan Sound Effects"
-        >
-          {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-          <span>{soundEnabled ? 'SOUND ON' : 'MUTED'}</span>
-        </button>
-      </div>
+        {/* Sidebar Footer: Admin Profile & Logout */}
+        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem', paddingLeft: '0.5rem' }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>
+              {user?.name?.[0] || 'A'}
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name || 'Administrator'}</div>
+              <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.email || 'admin@americanfitness.com'}</div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (logoutSession) logoutSession();
+              if (setActivePage) setActivePage('home');
+            }}
+            style={{
+              width: '100%',
+              padding: '0.65rem',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid #fecaca',
+              background: '#fef2f2',
+              color: '#dc2626',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
+      </aside>
 
-      <div className="container" style={{ maxWidth: '600px', padding: '1.25rem 1rem 0 1rem' }}>
-        
-        {/* KPI Analytics Metric Cards Bar */}
+      {/* 2. Main Admin Workspace Area (White Background) */}
+      <main style={{ flex: 1, padding: '1.5rem 2rem', overflowY: 'auto', minWidth: 0, background: '#f8fafc' }}>
+        {/* Metric Analytics Cards Top Bar */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '0.65rem',
-          marginBottom: '1.25rem'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.75rem'
         }}>
-          <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(245, 158, 11, 0.25)', padding: '0.75rem 0.6rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Total Members</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)', marginTop: '0.1rem' }}>{analytics.totalMembers || 148}</div>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 800 }}>Total Members</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>{analytics.totalMembers}</div>
           </div>
-          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.75rem 0.6rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.68rem', color: '#6ee7b7', textTransform: 'uppercase', fontWeight: 700 }}>Active Members</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#10b981', fontFamily: 'var(--font-heading)', marginTop: '0.1rem' }}>{analytics.activeMembers || 132}</div>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', boxShadow: '0 2px 10px rgba(16,185,129,0.05)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ fontSize: '0.72rem', color: '#166534', textTransform: 'uppercase', fontWeight: 800 }}>Active Members</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#15803d', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>{analytics.activeMembers}</div>
           </div>
-          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.75rem 0.6rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.68rem', color: '#fca5a5', textTransform: 'uppercase', fontWeight: 700 }}>Expired</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#ef4444', fontFamily: 'var(--font-heading)', marginTop: '0.1rem' }}>{analytics.expiredMembers || 16}</div>
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', boxShadow: '0 2px 10px rgba(239,68,68,0.05)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ fontSize: '0.72rem', color: '#991b1b', textTransform: 'uppercase', fontWeight: 800 }}>Expired Members</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#dc2626', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>{analytics.expiredMembers}</div>
           </div>
-        </div>
-
-        {/* Secondary KPI Bar: Today Attendance & Monthly Revenue */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1.25rem' }}>
-          <div style={{ background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', boxShadow: '0 2px 10px rgba(2,132,199,0.05)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: '0.68rem', color: '#7dd3fc', fontWeight: 700 }}>TODAY'S ATTENDANCE</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#38bdf8' }}>{analytics.todayAttendance || 42} Entries</div>
+              <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 800 }}>TODAY'S ATTENDANCE</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>{analytics.todayAttendance} Entries</div>
             </div>
-            <Clock size={22} color="#38bdf8" />
+            <Clock size={24} color="#0284c7" />
           </div>
-          <div style={{ background: 'rgba(217, 119, 6, 0.12)', border: '1px solid rgba(217, 119, 6, 0.3)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', boxShadow: '0 2px 10px rgba(2,132,199,0.05)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: '0.68rem', color: '#fde68a', fontWeight: 700 }}>MONTHLY REVENUE</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#fbbf24' }}>${(analytics.monthlyRevenue || 14850).toLocaleString()}</div>
+              <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 800 }}>MONTHLY REVENUE</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>${(analytics.monthlyRevenue || 0).toLocaleString()}</div>
             </div>
-            <DollarSign size={22} color="#fbbf24" />
+            <DollarSign size={24} color="#0284c7" />
           </div>
-        </div>
-
-        {/* Admin Navigation Sub-Tabs */}
-        <div style={{
-          display: 'flex',
-          background: 'rgba(15, 23, 42, 0.9)',
-          padding: '0.3rem',
-          borderRadius: 'var(--radius-full)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          marginBottom: '1.5rem',
-          gap: '0.25rem',
-          overflowX: 'auto'
-        }}>
-          <button
-            onClick={() => setActiveAdminTab('dashboard')}
-            style={{
-              flex: 1,
-              height: '38px',
-              minWidth: '100px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: activeAdminTab === 'dashboard' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-              color: activeAdminTab === 'dashboard' ? '#ffffff' : '#94a3b8',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.35rem'
-            }}
-          >
-            <ShieldCheck size={14} /> Overview
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('scanner')}
-            style={{
-              flex: 1,
-              height: '38px',
-              minWidth: '110px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: activeAdminTab === 'scanner' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-              color: activeAdminTab === 'scanner' ? '#ffffff' : '#94a3b8',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.35rem'
-            }}
-          >
-            <Camera size={14} /> QR Scanner
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('members')}
-            style={{
-              flex: 1,
-              height: '38px',
-              minWidth: '110px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: activeAdminTab === 'members' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-              color: activeAdminTab === 'members' ? '#ffffff' : '#94a3b8',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.35rem'
-            }}
-          >
-            <Users size={14} /> Members ({membersList.length || 148})
-          </button>
-          <button
-            onClick={() => setActiveAdminTab('attendance')}
-            style={{
-              flex: 1,
-              height: '38px',
-              minWidth: '110px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: activeAdminTab === 'attendance' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-              color: activeAdminTab === 'attendance' ? '#ffffff' : '#94a3b8',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.35rem'
-            }}
-          >
-            <Clock size={14} /> Attendance
-          </button>
         </div>
 
         {/* TAB 0: ADMIN OVERVIEW DASHBOARD */}
@@ -610,21 +609,21 @@ export default function MobileScannerPage({ setActivePage }) {
           <div>
             {/* Hero Launch Scanner Card */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid #f59e0b',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+              border: '2px solid #0284c7',
               borderRadius: 'var(--radius-lg)',
               padding: '1.5rem',
               marginBottom: '1.5rem',
               textAlign: 'center',
-              boxShadow: '0 10px 30px rgba(245, 158, 11, 0.25)'
+              boxShadow: '0 8px 30px rgba(2, 132, 199, 0.15)'
             }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.25)', border: '2px solid #fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-                <QrCode size={34} color="#fbbf24" />
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#e0f2fe', border: '2px solid #0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+                <QrCode size={34} color="#0284c7" />
               </div>
-              <h2 style={{ fontSize: '1.35rem', margin: '0 0 0.4rem 0', fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+              <h2 style={{ fontSize: '1.35rem', margin: '0 0 0.4rem 0', fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)' }}>
                 ADMIN CONTROL DASHBOARD
               </h2>
-              <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+              <p style={{ color: '#475569', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
                 Welcome Admin! Click below to open the QR camera scanner, scan member passes, and verify subscription status in real time.
               </p>
               
@@ -636,12 +635,12 @@ export default function MobileScannerPage({ setActivePage }) {
                   padding: '1rem',
                   fontSize: '1.05rem',
                   fontWeight: 900,
-                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   cursor: 'pointer',
-                  boxShadow: '0 6px 25px rgba(217, 119, 6, 0.45)',
+                  boxShadow: '0 6px 25px rgba(2, 132, 199, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -654,13 +653,14 @@ export default function MobileScannerPage({ setActivePage }) {
 
             {/* Quick Membership ID Subscription Search */}
             <div className="glass-card" style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
-              border: '1.5px solid rgba(245, 158, 11, 0.4)',
+              background: '#ffffff',
+              border: '1.5px solid #0284c7',
               borderRadius: 'var(--radius-lg)',
               padding: '1.25rem',
-              marginBottom: '1.5rem'
+              marginBottom: '1.5rem',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
             }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
                 🔍 QUICK MEMBERSHIP SUBSCRIPTION CHECK
               </div>
               <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
@@ -679,10 +679,10 @@ export default function MobileScannerPage({ setActivePage }) {
                     flex: 1,
                     minWidth: '200px',
                     padding: '0.75rem 1rem',
-                    background: 'rgba(0,0,0,0.5)',
-                    border: '1px solid rgba(245,158,11,0.5)',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: 'var(--radius-md)',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '0.9rem',
                     fontWeight: 700
                   }}
@@ -694,7 +694,7 @@ export default function MobileScannerPage({ setActivePage }) {
                   }}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: 'var(--radius-md)',
@@ -715,22 +715,22 @@ export default function MobileScannerPage({ setActivePage }) {
 
             {/* 1. Dedicated Manual Membership ID Subscription Checker */}
             <div className="glass-card" style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
-              border: '2px solid #f59e0b',
+              background: '#ffffff',
+              border: '2px solid #0284c7',
               borderRadius: 'var(--radius-lg)',
               padding: '1.5rem',
               marginBottom: '1.5rem',
-              boxShadow: '0 12px 35px rgba(245, 158, 11, 0.2)'
+              boxShadow: '0 6px 25px rgba(2, 132, 199, 0.12)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Search size={20} color="#fbbf24" />
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Search size={20} color="#0284c7" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                  <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)' }}>
                     ENTER MEMBERSHIP ID TO CHECK SUBSCRIPTION
                   </h3>
-                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem' }}>
+                  <p style={{ margin: 0, color: '#475569', fontSize: '0.8rem' }}>
                     Type any Membership ID, QR Code, or Email to verify active subscription status.
                   </p>
                 </div>
@@ -748,16 +748,15 @@ export default function MobileScannerPage({ setActivePage }) {
                       width: '100%',
                       padding: '0.8rem 0.85rem 0.8rem 2.5rem',
                       borderRadius: 'var(--radius-md)',
-                      background: 'rgba(0, 0, 0, 0.55)',
-                      border: '1.5px solid rgba(245, 158, 11, 0.6)',
-                      color: '#ffffff',
+                      background: '#f8fafc',
+                      border: '1.5px solid #cbd5e1',
+                      color: '#0f172a',
                       fontSize: '0.95rem',
                       fontWeight: 700,
-                      outline: 'none',
-                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)'
+                      outline: 'none'
                     }}
                   />
-                  <Search size={18} color="#fbbf24" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Search size={18} color="#0284c7" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
                 <button
                   onClick={() => handleVerify(manualCode)}
@@ -766,13 +765,13 @@ export default function MobileScannerPage({ setActivePage }) {
                     padding: '0.8rem 1.6rem',
                     fontSize: '0.9rem',
                     fontWeight: 900,
-                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: 'var(--radius-md)',
                     cursor: 'pointer',
                     letterSpacing: '0.04em',
-                    boxShadow: '0 6px 20px rgba(217, 119, 6, 0.35)'
+                    boxShadow: '0 6px 20px rgba(2, 132, 199, 0.35)'
                   }}
                 >
                   CHECK SUBSCRIPTION
@@ -782,8 +781,9 @@ export default function MobileScannerPage({ setActivePage }) {
 
             {/* 2. Primary Camera Scan Action Section */}
             <div className="glass-card scanner-frame-gold" style={{
-              background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(20px)',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
               borderRadius: 'var(--radius-lg)',
               padding: '1.5rem',
               textAlign: 'center',
@@ -797,21 +797,21 @@ export default function MobileScannerPage({ setActivePage }) {
                     width: '84px',
                     height: '84px',
                     borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, rgba(15, 23, 42, 0) 70%)',
-                    border: '2px solid rgba(245, 158, 11, 0.5)',
+                    background: '#e0f2fe',
+                    border: '2px solid #0284c7',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     margin: '0 auto 1.25rem auto',
-                    boxShadow: '0 0 30px rgba(217, 119, 6, 0.3)'
+                    boxShadow: '0 0 25px rgba(2, 132, 199, 0.25)'
                   }}>
-                    <Camera size={42} color="#f59e0b" />
+                    <Camera size={42} color="#0284c7" />
                   </div>
 
-                  <h2 style={{ fontSize: '1.35rem', marginBottom: '0.4rem', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#ffffff' }}>
+                  <h2 style={{ fontSize: '1.35rem', marginBottom: '0.4rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: '#0f172a' }}>
                     CAMERA QR SCANNER
                   </h2>
-                  <p style={{ color: '#94a3b8', fontSize: '0.84rem', marginBottom: '1.5rem' }}>
+                  <p style={{ color: '#475569', fontSize: '0.84rem', marginBottom: '1.5rem' }}>
                     Tap the button below to turn on device camera and scan member's QR code.
                   </p>
 
@@ -823,12 +823,12 @@ export default function MobileScannerPage({ setActivePage }) {
                         width: '100%',
                         padding: '1rem',
                         fontSize: '1.05rem',
-                        fontWeight: 800,
-                        background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                        fontWeight: 900,
+                        background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: 'var(--radius-md)',
-                        boxShadow: '0 10px 30px rgba(217, 119, 6, 0.4)',
+                        boxShadow: '0 8px 25px rgba(2, 132, 199, 0.35)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -842,7 +842,7 @@ export default function MobileScannerPage({ setActivePage }) {
                   </div>
 
                   {cameraError && (
-                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)', color: '#fca5a5', fontSize: '0.8rem' }}>
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)', color: '#dc2626', fontSize: '0.8rem' }}>
                       <AlertTriangle size={15} style={{ verticalAlign: 'text-bottom', marginRight: '0.35rem' }} />
                       {cameraError}
                     </div>
@@ -850,7 +850,7 @@ export default function MobileScannerPage({ setActivePage }) {
                 </div>
               ) : (
                 <div>
-                  <div style={{ position: 'relative', width: '100%', height: '280px', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000000', border: '2px solid rgba(245, 158, 11, 0.8)' }}>
+                  <div style={{ position: 'relative', width: '100%', height: '280px', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000000', border: '2px solid #0284c7' }}>
                     <video
                       ref={videoRef}
                       autoPlay
@@ -1087,19 +1087,50 @@ export default function MobileScannerPage({ setActivePage }) {
                       </div>
                     </div>
 
-                    <button
-                      onClick={async () => {
-                        const res = await renewMemberSubscription(verificationResult.member?.id || verificationResult.member?.membershipId, 'Pro Athlete VIP');
-                        if (res.success) {
-                          showToast(res.message, 'success');
-                          handleVerify(verificationResult.member?.membershipId);
-                        }
-                      }}
-                      className="btn btn-gold"
-                      style={{ width: '100%', padding: '0.85rem', fontSize: '0.9rem', fontWeight: 800, background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#ffffff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217,119,6,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      Renew Subscription Now (+1 Year) <ArrowRight size={18} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={async () => {
+                          const res = await sendExpiryNotice(verificationResult.member?.id || verificationResult.member?.membershipId);
+                          if (res.success) {
+                            showToast(res.message, 'success');
+                            handleVerify(verificationResult.member?.membershipId);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '220px',
+                          padding: '0.85rem',
+                          fontSize: '0.88rem',
+                          fontWeight: 800,
+                          background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 15px rgba(2,132,199,0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <Send size={18} /> Send Expiry Notice SMS & Email
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          const res = await renewMemberSubscription(verificationResult.member?.id || verificationResult.member?.membershipId, 'Pro Athlete VIP');
+                          if (res.success) {
+                            showToast(res.message, 'success');
+                            handleVerify(verificationResult.member?.membershipId);
+                          }
+                        }}
+                        className="btn btn-gold"
+                        style={{ flex: 1, minWidth: '220px', padding: '0.85rem', fontSize: '0.88rem', fontWeight: 800, background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#ffffff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', boxShadow: '0 4px 15px rgba(217,119,6,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                      >
+                        Renew Subscription (+1 Yr) <ArrowRight size={18} />
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -1375,13 +1406,81 @@ export default function MobileScannerPage({ setActivePage }) {
                     </div>
                   </div>
 
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.85rem' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
                     <span>Expiry: <strong style={{ color: '#ffffff' }}>{m.expiryDate}</strong></span>
                     <span>Remaining: <strong style={{ color: m.status === 'ACTIVE' ? '#34d399' : '#ef4444' }}>{m.remainingDays} Days</strong></span>
                   </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {/* Expiry Notification Delivery Status Indicator ("Message Sent or Not") */}
+                  {m.status === 'EXPIRED' && (
+                    <div style={{
+                      background: m.lastNoticeSent ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                      border: m.lastNoticeSent ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.4rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: m.lastNoticeSent ? '#6ee7b7' : '#fde68a', fontWeight: 700 }}>
+                        {m.lastNoticeSent ? <CheckCheck size={16} color="#34d399" /> : <Clock size={16} color="#fbbf24" />}
+                        <span>Notice Status: <strong>{m.lastNoticeSent ? `SENT TO USER ✅ (${m.lastNoticeSent})` : 'NOT SENT YET ⏳'}</strong></span>
+                      </div>
+
+                      {m.lastNoticeSent && (
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button
+                            onClick={() => setNoticeModalData({
+                              memberName: m.fullName,
+                              email: m.email,
+                              phone: m.phone,
+                              sentAt: m.lastNoticeSent,
+                              message: m.lastNoticeDetails?.message || `Dear ${m.fullName}, your ${m.membershipPlan} membership expired on ${m.expiryDate}. Please renew to maintain facility access.`
+                            })}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.15)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              borderRadius: '4px',
+                              padding: '0.25rem 0.6rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              color: '#ffffff',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Message Log 💬
+                          </button>
+                          <button
+                            onClick={() => setUserDashboardPreviewModal({
+                              member: m,
+                              sentFormatted: m.lastNoticeSent,
+                              message: m.lastNoticeDetails?.message || `Dear ${m.fullName}, your ${m.membershipPlan} membership expired on ${m.expiryDate}. Please renew to maintain facility access.`
+                            })}
+                            style={{
+                              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '0.25rem 0.65rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              color: '#ffffff',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 6px rgba(2,132,199,0.3)'
+                            }}
+                          >
+                            User Dashboard 👁️
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button
                       onClick={async () => {
                         const res = await generateMemberQRToken(m.membershipId);
@@ -1390,24 +1489,60 @@ export default function MobileScannerPage({ setActivePage }) {
                         }
                       }}
                       className="btn btn-secondary"
-                      style={{ flex: 1, padding: '0.45rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
+                      style={{ flex: 1, padding: '0.5rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
                     >
                       <QrCode size={14} /> Generate QR
                     </button>
+
                     {m.status === 'EXPIRED' && (
-                      <button
-                        onClick={async () => {
-                          const res = await renewMemberSubscription(m.id, m.membershipPlan);
-                          if (res.success) {
-                            showToast(res.message, 'success');
-                            loadDashboardData();
-                          }
-                        }}
-                        className="btn btn-gold"
-                        style={{ flex: 1, padding: '0.45rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
-                      >
-                        <RefreshCw size={14} /> Renew +1 Yr
-                      </button>
+                      <>
+                        <button
+                          onClick={async () => {
+                            const res = await sendExpiryNotice(m.id);
+                            if (res.success) {
+                              showToast(res.message, 'success');
+                              loadDashboardData();
+                              setUserDashboardPreviewModal({
+                                member: m,
+                                sentFormatted: res.lastNoticeSent,
+                                message: res.noticeDetails?.message || `Dear ${m.fullName}, your ${m.membershipPlan} membership expired on ${m.expiryDate}. Please renew your plan to restore 24/7 facility access.`
+                              });
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            background: m.lastNoticeSent ? 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)' : 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.3rem',
+                            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                          }}
+                        >
+                          <Send size={14} /> {m.lastNoticeSent ? 'Resend Notice' : 'Send Expiry Notice'}
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            const res = await renewMemberSubscription(m.id, m.membershipPlan);
+                            if (res.success) {
+                              showToast(res.message, 'success');
+                              loadDashboardData();
+                            }
+                          }}
+                          className="btn btn-gold"
+                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
+                        >
+                          <RefreshCw size={14} /> Renew +1 Yr
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1416,7 +1551,370 @@ export default function MobileScannerPage({ setActivePage }) {
           </div>
         )}
 
-      </div>
+        {/* TAB 4: CMS CONTENT MANAGER */}
+        {activeAdminTab === 'cms' && (
+          <div className="glass-card" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid #f59e0b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.4rem', color: '#ffffff', fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles color="#f59e0b" size={22} /> DYNAMIC CMS REAL-TIME MANAGER
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                  Add, edit, or remove website content across Homepage, Services, and Memberships in real-time.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.5)', padding: '0.35rem', borderRadius: 'var(--radius-full)' }}>
+                {[
+                  { id: 'homepage', label: '🏠 Homepage' },
+                  { id: 'services', label: `⚡ Services (${cmsData?.services?.length || 0})` },
+                  { id: 'memberships', label: `👑 Plans (${cmsData?.memberships?.length || 0})` }
+                ].map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setCmsSubTab(sub.id)}
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: 'var(--radius-full)',
+                      border: 'none',
+                      background: cmsSubTab === sub.id ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
+                      color: cmsSubTab === sub.id ? '#ffffff' : '#94a3b8',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* SUB-TAB 1: HOMEPAGE EDITOR */}
+            {cmsSubTab === 'homepage' && (
+              <form onSubmit={(e) => { e.preventDefault(); updateHomepageCMS(hpForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Welcome Badge Tagline</label>
+                  <input
+                    type="text"
+                    value={hpForm.welcomeTag}
+                    onChange={(e) => setHpForm({ ...hpForm, welcomeTag: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Main Headline (Line 1)</label>
+                    <input
+                      type="text"
+                      value={hpForm.headlineMain}
+                      onChange={(e) => setHpForm({ ...hpForm, headlineMain: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Sub Headline Gradient (Line 2)</label>
+                    <input
+                      type="text"
+                      value={hpForm.headlineSub}
+                      onChange={(e) => setHpForm({ ...hpForm, headlineSub: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#38bdf8', fontWeight: 700, fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Hero Description Paragraph</label>
+                  <textarea
+                    rows={4}
+                    value={hpForm.description}
+                    onChange={(e) => setHpForm({ ...hpForm, description: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem', lineHeight: '1.5' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Hero Image Source URL</label>
+                  <input
+                    type="text"
+                    value={hpForm.heroImage}
+                    onChange={(e) => setHpForm({ ...hpForm, heroImage: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem', marginBottom: '0.5rem' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => setHpForm({ ...hpForm, heroImage: '/hero-gym-arena.png' })} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
+                      Set Generated Gym Arena Image
+                    </button>
+                    <button type="button" onClick={() => setHpForm({ ...hpForm, heroImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80' })} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
+                      Set Dumbbell Rack Photo
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Primary CTA Button Label</label>
+                  <input
+                    type="text"
+                    value={hpForm.ctaText}
+                    onChange={(e) => setHpForm({ ...hpForm, ctaText: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-gold" style={{ padding: '0.9rem', fontSize: '1rem', fontWeight: 800 }}>
+                  💾 Save Homepage Content Live
+                </button>
+              </form>
+            )}
+
+            {/* SUB-TAB 2: SERVICES MANAGER */}
+            {cmsSubTab === 'services' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <h4 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>Active Fitness Services</h4>
+                  <button
+                    onClick={() => {
+                      setEditingService({
+                        id: '',
+                        title: '',
+                        badge: 'NEW OFFERING',
+                        iconName: 'Sparkles',
+                        color: '#0284C7',
+                        image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80',
+                        description: '',
+                        perksText: 'Custom programming\n24/7 Coaching support'
+                      });
+                      setServiceModalOpen(true);
+                    }}
+                    className="btn btn-gold"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                  >
+                    + Add New Service
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  {cmsData?.services?.map((s) => (
+                    <div key={s.id} className="glass-card" style={{ padding: '1rem', background: 'rgba(30,41,59,0.7)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column' }}>
+                      <img src={s.image} alt={s.title} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', marginBottom: '0.75rem' }} />
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: s.color || '#0284C7', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{s.badge}</div>
+                      <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: '0 0 0.4rem 0', fontWeight: 800 }}>{s.title}</h4>
+                      <p style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.4', flex: 1, marginBottom: '0.85rem' }}>{s.description}</p>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => {
+                            setEditingService({
+                              ...s,
+                              perksText: Array.isArray(s.perks) ? s.perks.join('\n') : ''
+                            });
+                            setServiceModalOpen(true);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem' }}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => deleteServiceCMS(s.id)}
+                          className="btn btn-secondary"
+                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 3: MEMBERSHIPS MANAGER */}
+            {cmsSubTab === 'memberships' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <h4 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>Membership Plans</h4>
+                  <button
+                    onClick={() => {
+                      setEditingMembership({
+                        id: '',
+                        name: '',
+                        tier: 'custom',
+                        monthlyPrice: 49,
+                        annualPrice: 39,
+                        badge: 'SPECIAL',
+                        popular: false,
+                        description: '',
+                        ctaText: 'Join Plan',
+                        featuresText: '24/7 Access to Main Weight Floor\nLocker Room Access'
+                      });
+                      setMembershipModalOpen(true);
+                    }}
+                    className="btn btn-gold"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                  >
+                    + Add New Plan
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  {cmsData?.memberships?.map((m) => (
+                    <div key={m.id} className="glass-card" style={{ padding: '1.25rem', background: 'rgba(30,41,59,0.7)', borderRadius: 'var(--radius-md)', border: m.popular ? '2px solid #f59e0b' : '1px solid var(--border-glass)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>{m.badge}</span>
+                        {m.popular && <span style={{ background: '#f59e0b', color: '#000000', fontSize: '0.65rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '10px' }}>POPULAR</span>}
+                      </div>
+                      <h4 style={{ color: '#ffffff', fontSize: '1.2rem', margin: '0 0 0.4rem 0', fontWeight: 900 }}>{m.name}</h4>
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.65rem', flexWrap: 'wrap', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                        <div>
+                          <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Monthly Rate</span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#38bdf8' }}>${m.monthlyPrice}</span>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>/mo</span>
+                        </div>
+                        <div style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '1rem' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#6ee7b7', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Annual Rate</span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#34d399' }}>${m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>/mo</span>
+                        </div>
+                      </div>
+                      <p style={{ color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '1rem', lineHeight: '1.4' }}>{m.description}</p>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => {
+                            setEditingMembership({
+                              ...m,
+                              featuresText: Array.isArray(m.features) ? m.features.join('\n') : ''
+                            });
+                            setMembershipModalOpen(true);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem' }}
+                        >
+                          ✏️ Edit Plan
+                        </button>
+                        <button
+                          onClick={() => deleteMembershipCMS(m.id)}
+                          className="btn btn-secondary"
+                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      {/* SERVICE EDIT MODAL */}
+      {serviceModalOpen && editingService && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div className="glass-card" style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: 'rgba(15, 23, 42, 0.98)', border: '1px solid #f59e0b', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>
+              {editingService.id ? 'Edit Service' : 'Add New Fitness Service'}
+            </h3>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const perks = editingService.perksText ? editingService.perksText.split('\n').filter(Boolean) : [];
+              saveServiceCMS({ ...editingService, perks });
+              setServiceModalOpen(false);
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Service Title</label>
+                <input type="text" required value={editingService.title} onChange={(e) => setEditingService({ ...editingService, title: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Badge Text</label>
+                  <input type="text" value={editingService.badge} onChange={(e) => setEditingService({ ...editingService, badge: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Theme Color (Hex)</label>
+                  <input type="text" value={editingService.color} onChange={(e) => setEditingService({ ...editingService, color: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#38bdf8' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Image Source URL</label>
+                <input type="text" value={editingService.image} onChange={(e) => setEditingService({ ...editingService, image: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Description</label>
+                <textarea rows={3} value={editingService.description} onChange={(e) => setEditingService({ ...editingService, description: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Key Perks / Highlights (1 per line)</label>
+                <textarea rows={4} value={editingService.perksText} onChange={(e) => setEditingService({ ...editingService, perksText: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setServiceModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>Save Service</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MEMBERSHIP EDIT MODAL */}
+      {membershipModalOpen && editingMembership && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div className="glass-card" style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: 'rgba(15, 23, 42, 0.98)', border: '1px solid #f59e0b', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>
+              {editingMembership.id ? 'Edit Membership Plan' : 'Add New Membership Plan'}
+            </h3>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const features = editingMembership.featuresText ? editingMembership.featuresText.split('\n').filter(Boolean) : [];
+              saveMembershipCMS({ ...editingMembership, features });
+              setMembershipModalOpen(false);
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Plan Name</label>
+                <input type="text" required value={editingMembership.name} onChange={(e) => setEditingMembership({ ...editingMembership, name: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Monthly Price ($)</label>
+                  <input type="number" required value={editingMembership.monthlyPrice} onChange={(e) => setEditingMembership({ ...editingMembership, monthlyPrice: Number(e.target.value) })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Annual Price ($/mo)</label>
+                  <input type="number" required value={editingMembership.annualPrice} onChange={(e) => setEditingMembership({ ...editingMembership, annualPrice: Number(e.target.value) })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Badge Text</label>
+                  <input type="text" value={editingMembership.badge} onChange={(e) => setEditingMembership({ ...editingMembership, badge: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
+                  <input type="checkbox" id="popCheck" checked={editingMembership.popular} onChange={(e) => setEditingMembership({ ...editingMembership, popular: e.target.checked })} />
+                  <label htmlFor="popCheck" style={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>Mark as Popular</label>
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Description</label>
+                <textarea rows={2} value={editingMembership.description} onChange={(e) => setEditingMembership({ ...editingMembership, description: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Features List (1 per line)</label>
+                <textarea rows={4} value={editingMembership.featuresText} onChange={(e) => setEditingMembership({ ...editingMembership, featuresText: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setMembershipModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>Save Plan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Security Encrypted QR Code Modal */}
       {generatedQRModal && (
@@ -1443,6 +1941,223 @@ export default function MobileScannerPage({ setActivePage }) {
           </div>
         </div>
       )}
+
+      {/* Notice Delivery Message Details Modal */}
+      {noticeModalData && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div className="glass-card" style={{ maxWidth: '500px', width: '100%', padding: '2rem', borderRadius: 'var(--radius-lg)', background: '#ffffff', border: '1px solid #bae6fd', color: '#0f172a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCheck size={24} color="#16a34a" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, color: '#0f172a' }}>Expiry Message Delivery Log</h3>
+                <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>STATUS: DELIVERED TO USER ✅</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-md)', padding: '1rem', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+              <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontWeight: 700 }}>RECIPIENT:</span>
+                <strong style={{ color: '#0f172a' }}>{noticeModalData.memberName}</strong>
+              </div>
+              <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontWeight: 700 }}>EMAIL ADDRESS:</span>
+                <strong style={{ color: '#0284c7' }}>{noticeModalData.email}</strong>
+              </div>
+              <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontWeight: 700 }}>PHONE NUMBER:</span>
+                <strong style={{ color: '#0f172a' }}>{noticeModalData.phone || '(555) 888-9900'}</strong>
+              </div>
+              <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontWeight: 700 }}>DELIVERY TIME:</span>
+                <strong style={{ color: '#15803d' }}>{noticeModalData.sentAt}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontWeight: 700 }}>CHANNELS:</span>
+                <strong style={{ color: '#2563eb' }}>SMS & Email (Multi-channel)</strong>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Delivered Message Content</label>
+              <div style={{ background: '#0f172a', color: '#38bdf8', padding: '1rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                {noticeModalData.message}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setNoticeModalData(null)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-md)',
+                background: '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              Close Log Window
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Live User Dashboard Preview Modal */}
+      {userDashboardPreviewModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div className="glass-card" style={{ maxWidth: '850px', width: '100%', padding: '2rem', borderRadius: 'var(--radius-lg)', background: '#0f172a', border: '2px solid #0284c7', maxHeight: '92vh', overflowY: 'auto' }}>
+            {/* Modal Top Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <User size={20} color="#ffffff" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#38bdf8', fontWeight: 800, letterSpacing: '0.08em' }}>AUTOMATIC USER DASHBOARD PREVIEW</div>
+                  <h3 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 900, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                    LIVE USER DASHBOARD — {userDashboardPreviewModal.member?.fullName?.toUpperCase()}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setUserDashboardPreviewModal(null)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 1. Live Expiry Notice Banner (Rendered in User Dashboard) */}
+            <div style={{
+              padding: '1.5rem',
+              marginBottom: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%)',
+              border: '2px solid #ef4444',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 8px 30px rgba(239, 68, 68, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.25rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '260px' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#ef4444', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(239,68,68,0.5)' }}>
+                  <AlertCircle size={28} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fca5a5', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>⚠️ MEMBERSHIP EXPIRY NOTICE FROM ADMIN</span>
+                    <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', color: '#ffffff' }}>{userDashboardPreviewModal.sentFormatted}</span>
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                    {userDashboardPreviewModal.message}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
+                    📩 Delivered via SMS & Email to <strong>{userDashboardPreviewModal.member?.email}</strong> • <strong>{userDashboardPreviewModal.member?.phone || '(555) 888-9900'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={async () => {
+                  const res = await renewMemberSubscription(userDashboardPreviewModal.member?.id, userDashboardPreviewModal.member?.membershipPlan);
+                  if (res.success) {
+                    showToast(res.message, 'success');
+                    setUserDashboardPreviewModal(null);
+                    loadDashboardData();
+                  }
+                }}
+                className="btn pulse-button"
+                style={{
+                  padding: '0.85rem 1.4rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 900,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(2, 132, 199, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexShrink: 0
+                }}
+              >
+                <RefreshCw size={18} /> RENEW MEMBERSHIP NOW (+1 YR)
+              </button>
+            </div>
+
+            {/* 2. User Profile Card Simulation */}
+            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              <img
+                src={userDashboardPreviewModal.member?.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'}
+                alt="Member Avatar"
+                style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #ef4444' }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '1.3rem', margin: 0, color: '#ffffff', fontWeight: 900 }}>{userDashboardPreviewModal.member?.fullName}</h4>
+                  <span style={{ padding: '0.25rem 0.75rem', borderRadius: '12px', background: 'rgba(239,68,68,0.25)', color: '#fca5a5', fontWeight: 900, fontSize: '0.8rem' }}>
+                    SUBSCRIPTION EXPIRED ❌
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#fbbf24', marginTop: '0.2rem' }}>Plan: {userDashboardPreviewModal.member?.membershipPlan}</div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.1rem', fontFamily: 'monospace' }}>
+                  Member ID: {userDashboardPreviewModal.member?.membershipId} • Expiry: {userDashboardPreviewModal.member?.expiryDate}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Action Footer */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setUser(userDashboardPreviewModal.member);
+                  localStorage.setItem('afg_user', JSON.stringify(userDashboardPreviewModal.member));
+                  if (setActivePage) setActivePage('dashboard');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <User size={18} /> Switch & View Full Member Portal As {userDashboardPreviewModal.member?.fullName?.split(' ')[0]}
+              </button>
+              <button
+                onClick={() => setUserDashboardPreviewModal(null)}
+                style={{
+                  padding: '0.85rem 1.5rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </main>
     </div>
   );
 }

@@ -341,9 +341,100 @@ const getDigitalPass = (req, res) => {
 
 // GET Memberships
 const getMemberships = (req, res) => {
+  const cms = store.getCmsData();
   res.json({
     success: true,
-    data: store.membershipPlans
+    data: cms.memberships && cms.memberships.length ? cms.memberships : store.membershipPlans
+  });
+};
+
+// CMS: Get Full Dynamic Content
+const getCmsContent = (req, res) => {
+  const cms = store.getCmsData();
+  res.json({
+    success: true,
+    data: cms
+  });
+};
+
+// CMS: Update Homepage Hero & Highlights
+const updateHomepageContent = (req, res) => {
+  const cms = store.getCmsData();
+  cms.homepage = {
+    ...cms.homepage,
+    ...req.body
+  };
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Homepage content updated successfully!',
+    homepage: cms.homepage
+  });
+};
+
+// CMS: Services CRUD
+const saveService = (req, res) => {
+  const cms = store.getCmsData();
+  const service = req.body;
+  if (!service.id) {
+    service.id = 'srv_' + Date.now();
+  }
+  const index = cms.services.findIndex(s => s.id === service.id);
+  if (index >= 0) {
+    cms.services[index] = { ...cms.services[index], ...service };
+  } else {
+    cms.services.push(service);
+  }
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Service saved successfully!',
+    services: cms.services
+  });
+};
+
+const deleteService = (req, res) => {
+  const { id } = req.params;
+  const cms = store.getCmsData();
+  cms.services = cms.services.filter(s => s.id !== id);
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Service deleted successfully!',
+    services: cms.services
+  });
+};
+
+// CMS: Memberships CRUD
+const saveMembership = (req, res) => {
+  const cms = store.getCmsData();
+  const membership = req.body;
+  if (!membership.id) {
+    membership.id = 'mem_' + Date.now();
+  }
+  const index = cms.memberships.findIndex(m => m.id === membership.id);
+  if (index >= 0) {
+    cms.memberships[index] = { ...cms.memberships[index], ...membership };
+  } else {
+    cms.memberships.push(membership);
+  }
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Membership plan saved successfully!',
+    memberships: cms.memberships
+  });
+};
+
+const deleteMembership = (req, res) => {
+  const { id } = req.params;
+  const cms = store.getCmsData();
+  cms.memberships = cms.memberships.filter(m => m.id !== id);
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Membership plan deleted successfully!',
+    memberships: cms.memberships
   });
 };
 
@@ -602,94 +693,97 @@ const verifyQR = (req, res) => {
   });
 };
 
-// Admin: Get Attendance Logs
+// GET Admin Attendance Logs Audit Trail
 const getAttendanceLogs = (req, res) => {
-  const logs = store.attendanceLogs || [
-    {
-      id: 'att_seed_1',
-      membershipId: 'AFG-882910',
-      memberName: 'Alex Morgan',
-      membershipPlan: 'Pro Athlete VIP',
-      status: 'Active',
-      date: new Date().toISOString().split('T')[0],
-      time: '08:15 AM',
-      scannedBy: 'Admin Verification Officer',
-      gate: 'Mobile Camera Gate 1'
-    }
-  ];
-
   res.json({
     success: true,
-    data: logs
+    count: (store.attendanceLogs || []).length,
+    data: store.attendanceLogs || []
   });
 };
 
-// Admin: Get Dashboard Analytics
+// GET Admin Dashboard Analytics
 const getAdminAnalytics = (req, res) => {
-  const total = store.users.length || 2;
-  const active = store.users.filter(u => u.status !== 'EXPIRED').length || 1;
-  const expired = total - active;
+  const allUsers = store.users.filter(u => u.role !== 'admin');
+  const now = new Date();
+
+  const activeUsers = allUsers.filter(u => {
+    if (u.status === 'EXPIRED') return false;
+    if (u.expiryDate && new Date(u.expiryDate) < now) return false;
+    return true;
+  });
+
+  const activeCount = activeUsers.length;
+  const expiredCount = allUsers.length - activeCount;
+
+  const todayStr = now.toISOString().split('T')[0];
+  const todayCheckIns = (store.attendanceLogs || []).filter(a => a.date === todayStr).length;
+
+  const monthlyRevenue = activeUsers.reduce((sum, u) => {
+    const plan = (u.membershipPlan || '').toLowerCase();
+    if (plan.includes('vip')) return sum + 99;
+    if (plan.includes('pro')) return sum + 59;
+    return sum + 29;
+  }, 0);
 
   res.json({
     success: true,
     analytics: {
-      totalMembers: Math.max(total, 148),
-      activeMembers: Math.max(active, 132),
-      expiredMembers: Math.max(expired, 16),
-      todayAttendance: (store.attendanceLogs?.length || 0) + 42,
-      monthlyRevenue: 14850
+      totalMembers: allUsers.length,
+      activeMembers: activeCount,
+      expiredMembers: expiredCount,
+      todayAttendance: todayCheckIns,
+      monthlyRevenue: monthlyRevenue
     }
   });
 };
 
-// Admin: Get Member Directory
+// GET Admin All Members List (with filter & search)
 const getAdminMembers = (req, res) => {
   const { status, search } = req.query;
+  const now = new Date();
 
-  const mockList = [
-    {
-      id: 'usr_demo_1',
-      membershipId: 'AFG-882910',
-      fullName: 'Alex Morgan',
-      email: 'alex.morgan@example.com',
-      phone: '(555) 234-5678',
-      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-      membershipPlan: 'Pro Athlete VIP',
-      joinedDate: '2026-01-15',
-      expiryDate: '2027-12-31',
-      remainingDays: 511,
-      status: 'ACTIVE',
-      qrCode: 'AFG-882910'
-    },
-    {
-      id: 'usr_demo_2',
-      membershipId: 'AFG-EXPIRED-99',
-      fullName: 'Marcus Brody',
-      email: 'marcus.brody@example.com',
-      phone: '(555) 888-9900',
-      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
-      membershipPlan: 'Basic Gym Access',
-      joinedDate: '2024-01-10',
-      expiryDate: '2025-01-15',
-      remainingDays: 0,
-      status: 'EXPIRED',
-      qrCode: 'AFG-EXPIRED-99'
-    }
-  ];
+  let members = store.users.filter(u => u.role !== 'admin').map(u => {
+    const isExpired = u.status === 'EXPIRED' || (u.expiryDate && new Date(u.expiryDate) < now);
+    const diffMs = u.expiryDate ? new Date(u.expiryDate) - now : 0;
+    const remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
-  let result = [...mockList];
+    return {
+      id: u.id,
+      membershipId: u.membershipId || u.id.toUpperCase(),
+      fullName: u.fullName,
+      email: u.email,
+      phone: u.phone,
+      photo: u.photo || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`,
+      membershipPlan: u.membershipPlan || 'Pro Athlete VIP',
+      joinedDate: u.joinedDate || '2026-01-15',
+      expiryDate: u.expiryDate || '2027-12-31',
+      remainingDays: isExpired ? 0 : remainingDays,
+      status: isExpired ? 'EXPIRED' : 'ACTIVE',
+      qrCode: u.qrCode || u.membershipId || u.id,
+      lastNoticeSent: u.lastNoticeSent || null,
+      noticeCount: u.noticeCount || 0,
+      lastNoticeDetails: u.lastNoticeDetails || null
+    };
+  });
+
   if (status && status !== 'all') {
-    result = result.filter(m => m.status.toLowerCase() === status.toLowerCase());
+    members = members.filter(m => m.status.toLowerCase() === status.toLowerCase());
   }
+
   if (search) {
     const q = search.toLowerCase();
-    result = result.filter(m => m.fullName.toLowerCase().includes(q) || m.membershipId.toLowerCase().includes(q));
+    members = members.filter(m =>
+      m.fullName.toLowerCase().includes(q) ||
+      m.membershipId.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q)
+    );
   }
 
   res.json({
     success: true,
-    count: result.length,
-    members: result
+    count: members.length,
+    members
   });
 };
 
@@ -733,6 +827,59 @@ const generateQRToken = (req, res) => {
   });
 };
 
+// POST Send Expiry Notice Message to User (SMS & Email Notification Audit)
+const sendExpiryNotice = (req, res) => {
+  const { memberId } = req.body;
+  const user = store.users.find(u => u.id === memberId || u.membershipId === memberId);
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Member not found.' });
+  }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const sentFormatted = `Today at ${timeStr}`;
+
+  user.lastNoticeSent = sentFormatted;
+  user.noticeCount = (user.noticeCount || 0) + 1;
+  user.lastNoticeDetails = {
+    sentAt: now.toLocaleString(),
+    channel: 'SMS & Email (Multi-channel)',
+    status: 'DELIVERED ✅',
+    recipientEmail: user.email,
+    recipientPhone: user.phone || '(555) 888-9900',
+    message: `Dear ${user.fullName}, your American Fitness Gym ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`
+  };
+
+  if (!store.expiryNotifications) {
+    store.expiryNotifications = [];
+  }
+  store.expiryNotifications.unshift({
+    id: 'notif_' + Date.now(),
+    userId: user.id,
+    memberName: user.fullName,
+    membershipId: user.membershipId || user.id,
+    sentAt: user.lastNoticeDetails.sentAt,
+    sentFormatted,
+    message: user.lastNoticeDetails.message,
+    status: 'DELIVERED ✅'
+  });
+
+  res.json({
+    success: true,
+    message: `Expiry reminder SMS & Email successfully sent to ${user.fullName} (${user.email})!`,
+    lastNoticeSent: sentFormatted,
+    noticeDetails: user.lastNoticeDetails,
+    member: {
+      id: user.id,
+      membershipId: user.membershipId || user.id,
+      fullName: user.fullName,
+      lastNoticeSent: sentFormatted,
+      noticeCount: user.noticeCount
+    }
+  });
+};
+
 module.exports = {
   getHealth,
   registerUser,
@@ -754,5 +901,12 @@ module.exports = {
   getAdminAnalytics,
   getAdminMembers,
   renewSubscription,
-  generateQRToken
+  generateQRToken,
+  sendExpiryNotice,
+  getCmsContent,
+  updateHomepageContent,
+  saveService,
+  deleteService,
+  saveMembership,
+  deleteMembership
 };

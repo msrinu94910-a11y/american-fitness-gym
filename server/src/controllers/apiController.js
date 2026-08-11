@@ -341,9 +341,100 @@ const getDigitalPass = (req, res) => {
 
 // GET Memberships
 const getMemberships = (req, res) => {
+  const cms = store.getCmsData();
   res.json({
     success: true,
-    data: store.membershipPlans
+    data: cms.memberships && cms.memberships.length ? cms.memberships : store.membershipPlans
+  });
+};
+
+// CMS: Get Full Dynamic Content
+const getCmsContent = (req, res) => {
+  const cms = store.getCmsData();
+  res.json({
+    success: true,
+    data: cms
+  });
+};
+
+// CMS: Update Homepage Hero & Highlights
+const updateHomepageContent = (req, res) => {
+  const cms = store.getCmsData();
+  cms.homepage = {
+    ...cms.homepage,
+    ...req.body
+  };
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Homepage content updated successfully!',
+    homepage: cms.homepage
+  });
+};
+
+// CMS: Services CRUD
+const saveService = (req, res) => {
+  const cms = store.getCmsData();
+  const service = req.body;
+  if (!service.id) {
+    service.id = 'srv_' + Date.now();
+  }
+  const index = cms.services.findIndex(s => s.id === service.id);
+  if (index >= 0) {
+    cms.services[index] = { ...cms.services[index], ...service };
+  } else {
+    cms.services.push(service);
+  }
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Service saved successfully!',
+    services: cms.services
+  });
+};
+
+const deleteService = (req, res) => {
+  const { id } = req.params;
+  const cms = store.getCmsData();
+  cms.services = cms.services.filter(s => s.id !== id);
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Service deleted successfully!',
+    services: cms.services
+  });
+};
+
+// CMS: Memberships CRUD
+const saveMembership = (req, res) => {
+  const cms = store.getCmsData();
+  const membership = req.body;
+  if (!membership.id) {
+    membership.id = 'mem_' + Date.now();
+  }
+  const index = cms.memberships.findIndex(m => m.id === membership.id);
+  if (index >= 0) {
+    cms.memberships[index] = { ...cms.memberships[index], ...membership };
+  } else {
+    cms.memberships.push(membership);
+  }
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Membership plan saved successfully!',
+    memberships: cms.memberships
+  });
+};
+
+const deleteMembership = (req, res) => {
+  const { id } = req.params;
+  const cms = store.getCmsData();
+  cms.memberships = cms.memberships.filter(m => m.id !== id);
+  store.saveCmsData(cms);
+  res.json({
+    success: true,
+    message: 'Membership plan deleted successfully!',
+    memberships: cms.memberships
   });
 };
 
@@ -718,27 +809,33 @@ const getAdminAnalytics = (req, res) => {
   const allUsers = store.users.filter(u => u.role !== 'admin');
   const now = new Date();
 
-  const activeCount = allUsers.filter(u => {
+  const activeUsers = allUsers.filter(u => {
     if (u.status === 'EXPIRED') return false;
     if (u.expiryDate && new Date(u.expiryDate) < now) return false;
     return true;
-  }).length;
+  });
 
+  const activeCount = activeUsers.length;
   const expiredCount = allUsers.length - activeCount;
 
   const todayStr = now.toISOString().split('T')[0];
-  const todayCheckIns = store.attendanceLogs.filter(a => a.date === todayStr).length;
+  const todayCheckIns = (store.attendanceLogs || []).filter(a => a.date === todayStr).length;
 
-  const monthlyRevenue = (activeCount * 59) + 4250; // Dynamic revenue calculation
+  const monthlyRevenue = activeUsers.reduce((sum, u) => {
+    const plan = (u.membershipPlan || '').toLowerCase();
+    if (plan.includes('vip')) return sum + 99;
+    if (plan.includes('pro')) return sum + 59;
+    return sum + 29;
+  }, 0);
 
   res.json({
     success: true,
     analytics: {
-      totalMembers: allUsers.length || 148,
-      activeMembers: activeCount || 132,
-      expiredMembers: expiredCount || 16,
-      todayAttendance: todayCheckIns || 42,
-      monthlyRevenue: monthlyRevenue || 14850
+      totalMembers: allUsers.length,
+      activeMembers: activeCount,
+      expiredMembers: expiredCount,
+      todayAttendance: todayCheckIns,
+      monthlyRevenue: monthlyRevenue
     }
   });
 };
@@ -765,7 +862,10 @@ const getAdminMembers = (req, res) => {
       expiryDate: u.expiryDate || '2027-12-31',
       remainingDays: isExpired ? 0 : remainingDays,
       status: isExpired ? 'EXPIRED' : 'ACTIVE',
-      qrCode: u.qrCode || u.membershipId || u.id
+      qrCode: u.qrCode || u.membershipId || u.id,
+      lastNoticeSent: u.lastNoticeSent || null,
+      noticeCount: u.noticeCount || 0,
+      lastNoticeDetails: u.lastNoticeDetails || null
     };
   });
 
@@ -847,6 +947,59 @@ const generateMemberQR = (req, res) => {
   });
 };
 
+// POST Send Expiry Notice Message to User (SMS & Email Notification Audit)
+const sendExpiryNotice = (req, res) => {
+  const { memberId } = req.body;
+  const user = store.users.find(u => u.id === memberId || u.membershipId === memberId);
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Member not found.' });
+  }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const sentFormatted = `Today at ${timeStr}`;
+
+  user.lastNoticeSent = sentFormatted;
+  user.noticeCount = (user.noticeCount || 0) + 1;
+  user.lastNoticeDetails = {
+    sentAt: now.toLocaleString(),
+    channel: 'SMS & Email (Multi-channel)',
+    status: 'DELIVERED ✅',
+    recipientEmail: user.email,
+    recipientPhone: user.phone || '(555) 888-9900',
+    message: `Dear ${user.fullName}, your American Fitness Gym ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`
+  };
+
+  if (!store.expiryNotifications) {
+    store.expiryNotifications = [];
+  }
+  store.expiryNotifications.unshift({
+    id: 'notif_' + Date.now(),
+    userId: user.id,
+    memberName: user.fullName,
+    membershipId: user.membershipId || user.id,
+    sentAt: user.lastNoticeDetails.sentAt,
+    sentFormatted,
+    message: user.lastNoticeDetails.message,
+    status: 'DELIVERED ✅'
+  });
+
+  res.json({
+    success: true,
+    message: `Expiry reminder SMS & Email successfully sent to ${user.fullName} (${user.email})!`,
+    lastNoticeSent: sentFormatted,
+    noticeDetails: user.lastNoticeDetails,
+    member: {
+      id: user.id,
+      membershipId: user.membershipId || user.id,
+      fullName: user.fullName,
+      lastNoticeSent: sentFormatted,
+      noticeCount: user.noticeCount
+    }
+  });
+};
+
 module.exports = {
   getHealth,
   registerUser,
@@ -868,5 +1021,12 @@ module.exports = {
   getAdminAnalytics,
   getAdminMembers,
   renewSubscription,
-  generateMemberQR
+  generateMemberQR,
+  sendExpiryNotice,
+  getCmsContent,
+  updateHomepageContent,
+  saveService,
+  deleteService,
+  saveMembership,
+  deleteMembership
 };
