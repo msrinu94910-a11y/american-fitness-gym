@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   fetchUserProfile, fetchMemberBookings, bookClass, cancelBooking,
   fetchCmsContent, updateCmsHomepage, saveCmsService, deleteCmsService,
-  saveCmsMembership, deleteCmsMembership
+  saveCmsMembership, deleteCmsMembership, fetchUserNotifications
 } from '../services/api';
 
 const AppContext = createContext();
@@ -10,6 +10,7 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [userBookings, setUserBookings] = useState([]);
+  const [realtimeNoticePopup, setRealtimeNoticePopup] = useState(null);
 
   // User auth state
   const [user, setUser] = useState(() => {
@@ -414,6 +415,138 @@ export function AppProvider({ children }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
+  // Synthesized Web Audio Notification Chime
+  const playAlertSound = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.3);
+
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.55);
+    } catch (e) {}
+  };
+
+  const triggerRealtimeNotice = (noticePayload) => {
+    if (!noticePayload) return;
+
+    playAlertSound();
+
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        lastNoticeSent: noticePayload.sentFormatted || noticePayload.lastNoticeSent || 'Just now',
+        noticeCount: (prev.noticeCount || 0) + 1,
+        lastNoticeDetails: noticePayload.lastNoticeDetails || {
+          sentAt: noticePayload.sentAt || new Date().toLocaleString(),
+          channel: 'SMS & Email (Multi-channel)',
+          status: 'DELIVERED ✅',
+          recipientEmail: prev.email,
+          recipientPhone: prev.phone || '(555) 888-9900',
+          message: noticePayload.message
+        }
+      };
+      localStorage.setItem('afg_user', JSON.stringify(updated));
+      return updated;
+    });
+
+    setRealtimeNoticePopup(noticePayload);
+
+    // Trigger Toast Notification
+    const id = Date.now();
+    const formattedTime = noticePayload.sentFormatted || 'Just now';
+    setToasts(prev => [
+      ...prev,
+      {
+        id,
+        message: `🚨 REAL-TIME ALERT: Expiry Notice message sent by Gym Admin (${formattedTime})!`,
+        type: 'warning'
+      }
+    ]);
+  };
+
+  // Real-Time Event Listener (BroadcastChannel + SSE Stream + Polling Fallback)
+  useEffect(() => {
+    if (!user) return;
+
+    // 1. Cross-Tab Instant Sync (0ms BroadcastChannel)
+    let channel = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      channel = new BroadcastChannel('AFG_NOTIFICATIONS_CHANNEL');
+      channel.onmessage = (event) => {
+        if (event.data && event.data.type === 'EXPIRY_NOTICE_SENT') {
+          const payload = event.data.payload;
+          if (
+            payload &&
+            (payload.userId === user.id ||
+              payload.membershipId === user.membershipId ||
+              payload.membershipId === user.id ||
+              payload.userEmail === user.email)
+          ) {
+            triggerRealtimeNotice(payload);
+          }
+        }
+      };
+    }
+
+    // 2. Server-Sent Events (SSE Stream) Connection
+    let eventSource = null;
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE || '/api';
+      eventSource = new EventSource(`${apiBase}/events`);
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'EXPIRY_NOTICE_SENT' && data.payload) {
+            const p = data.payload;
+            if (
+              p.userId === user.id ||
+              p.membershipId === user.membershipId ||
+              p.membershipId === user.id ||
+              p.userEmail === user.email
+            ) {
+              triggerRealtimeNotice(p);
+            }
+          }
+        } catch (err) {}
+      };
+    } catch (err) {}
+
+    // 3. Fast Poll Fallback (Every 3.5 Seconds)
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetchUserNotifications();
+        if (res && res.success && res.lastNoticeSent) {
+          if (res.lastNoticeSent !== user.lastNoticeSent) {
+            triggerRealtimeNotice({
+              sentFormatted: res.lastNoticeSent,
+              sentAt: res.lastNoticeDetails?.sentAt,
+              message: res.lastNoticeDetails?.message,
+              lastNoticeDetails: res.lastNoticeDetails
+            });
+          }
+        }
+      } catch (e) {}
+    }, 3500);
+
+    return () => {
+      if (channel) channel.close();
+      if (eventSource) eventSource.close();
+      clearInterval(interval);
+    };
+  }, [user?.id, user?.lastNoticeSent]);
+
   return (
     <AppContext.Provider
       value={{
@@ -442,7 +575,10 @@ export function AppProvider({ children }) {
         saveServiceCMS,
         deleteServiceCMS,
         saveMembershipCMS,
-        deleteMembershipCMS
+        deleteMembershipCMS,
+        realtimeNoticePopup,
+        closeRealtimeNoticePopup: () => setRealtimeNoticePopup(null),
+        triggerRealtimeNotice
       }}
     >
       {children}

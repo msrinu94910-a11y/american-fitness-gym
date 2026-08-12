@@ -16,6 +16,24 @@ export async function fetchHealth() {
   return res.json();
 }
 
+// Clean local storage cache on initialization
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('AFG_REAL_REGISTERED_USERS');
+    localStorage.removeItem('AFG_REGISTERED_USERS_DB');
+    localStorage.removeItem('AFG_USERS');
+  } catch (e) {}
+}
+
+export function clearAllUsers() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('AFG_REAL_REGISTERED_USERS');
+    localStorage.removeItem('AFG_REGISTERED_USERS_DB');
+    localStorage.removeItem('AFG_USERS');
+  } catch (err) {}
+}
+
 export async function loginUser(credentials) {
   try {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -24,62 +42,12 @@ export async function loginUser(credentials) {
       body: JSON.stringify(credentials)
     });
     const data = await res.json();
-    if (data && data.success) {
-      return data;
-    }
-    const cleanEmail = (credentials.email || 'member@example.com').toLowerCase().trim();
-    const rawName = cleanEmail.split('@')[0];
-    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-    const memId = 'AFG-' + Math.floor(100000 + Math.random() * 900000);
-    const mockUser = {
-      id: 'usr_' + Date.now(),
-      membershipId: memId,
-      fullName: formattedName,
-      email: cleanEmail,
-      phone: '(555) 123-4567',
-      membershipPlan: 'Pro Athlete VIP',
-      status: 'ACTIVE_MEMBER',
-      joinedDate: new Date().toISOString().split('T')[0],
-      expiryDate: '2027-12-31',
-      qrCode: memId,
-      totalCheckIns: 1,
-      rewardPoints: 100,
-      workoutStreakDays: 1,
-      role: cleanEmail.includes('admin') ? 'admin' : 'member'
-    };
-    return {
-      success: true,
-      message: `Welcome back, ${mockUser.fullName}! Signed in successfully.`,
-      token: 'afg_token_' + (typeof btoa !== 'undefined' ? btoa(cleanEmail) : Date.now()) + '_' + Date.now(),
-      user: mockUser
-    };
+    return data;
   } catch (err) {
-    console.warn('Backend server connection error, attempting local auth fallback:', err);
-    const cleanEmail = (credentials.email || 'member@example.com').toLowerCase().trim();
-    const rawName = cleanEmail.split('@')[0];
-    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-    const memId = 'AFG-' + Math.floor(100000 + Math.random() * 900000);
-    const mockUser = {
-      id: 'usr_' + Date.now(),
-      membershipId: memId,
-      fullName: formattedName,
-      email: cleanEmail,
-      phone: '(555) 123-4567',
-      membershipPlan: 'Pro Athlete VIP',
-      status: 'ACTIVE_MEMBER',
-      joinedDate: new Date().toISOString().split('T')[0],
-      expiryDate: '2027-12-31',
-      qrCode: memId,
-      totalCheckIns: 1,
-      rewardPoints: 100,
-      workoutStreakDays: 1,
-      role: cleanEmail.includes('admin') ? 'admin' : 'member'
-    };
+    console.error('Login backend server connection error:', err);
     return {
-      success: true,
-      message: `Welcome back, ${mockUser.fullName}! Signed in successfully.`,
-      token: 'afg_token_' + (typeof btoa !== 'undefined' ? btoa(cleanEmail) : Date.now()) + '_' + Date.now(),
-      user: mockUser
+      success: false,
+      message: 'Failed to connect to authentication server. Please ensure backend server is running.'
     };
   }
 }
@@ -94,30 +62,48 @@ export async function registerUser(userData) {
     const data = await res.json();
     return data;
   } catch (err) {
-    console.warn('Backend server connection error, using local registration fallback:', err);
-    const cleanEmail = (userData.email || 'member@example.com').toLowerCase().trim();
-    const namePart = (userData.fullName || 'MEMBER').split(' ')[0].toUpperCase();
-    const mockUser = {
-      id: 'usr_' + Date.now(),
-      fullName: userData.fullName || 'Gym Member',
-      email: cleanEmail,
-      phone: userData.phone || '(555) 123-4567',
-      membershipPlan: userData.membershipPlan || 'Pro Athlete',
-      status: 'ACTIVE_MEMBER',
-      joinedDate: new Date().toISOString().split('T')[0],
-      qrCode: 'AFG-QR-' + Math.floor(100000 + Math.random() * 900000) + '-' + namePart,
-      emergencyContact: 'Not provided',
-      fitnessGoal: 'General Health & Fitness',
-      totalCheckIns: 1,
-      rewardPoints: 100,
-      workoutStreakDays: 1
+    console.error('Registration backend server connection error:', err);
+    return {
+      success: false,
+      message: 'Failed to connect to registration server. Please ensure backend server is running.'
     };
-    const mockToken = 'afg_token_' + (typeof btoa !== 'undefined' ? btoa(cleanEmail) : Date.now()) + '_' + Date.now();
+  }
+}
+
+export async function fetchAdminAnalytics() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/analytics`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
     return {
       success: true,
-      message: 'Account created successfully! Welcome to American Fitness Gym.',
-      token: mockToken,
-      user: mockUser
+      analytics: {
+        totalMembers: 0,
+        activeMembers: 0,
+        expiredMembers: 0,
+        todayAttendance: 0,
+        monthlyRevenue: 0
+      }
+    };
+  }
+}
+
+export async function fetchAdminMembers(status = 'all', search = '') {
+  try {
+    const query = new URLSearchParams({ status, search }).toString();
+    const res = await fetch(`${API_BASE}/admin/members?${query}`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    return {
+      success: true,
+      count: 0,
+      members: []
     };
   }
 }
@@ -340,81 +326,7 @@ export async function fetchAttendanceLogs() {
   }
 }
 
-export async function fetchAdminAnalytics() {
-  try {
-    const res = await fetch(`${API_BASE}/admin/analytics`, {
-      headers: getAuthHeaders()
-    });
-    return await res.json();
-  } catch (err) {
-    return {
-      success: true,
-      analytics: {
-        totalMembers: 148,
-        activeMembers: 132,
-        expiredMembers: 16,
-        todayAttendance: 42,
-        monthlyRevenue: 14850
-      }
-    };
-  }
-}
 
-export async function fetchAdminMembers(status = 'all', search = '') {
-  try {
-    const query = new URLSearchParams({ status, search }).toString();
-    const res = await fetch(`${API_BASE}/admin/members?${query}`, {
-      headers: getAuthHeaders()
-    });
-    return await res.json();
-  } catch (err) {
-    const mockMembers = [
-      {
-        id: 'usr_demo_1',
-        membershipId: 'AFG-882910',
-        fullName: 'Alex Morgan',
-        email: 'alex.morgan@example.com',
-        phone: '(555) 234-5678',
-        photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-        membershipPlan: 'Pro Athlete VIP',
-        joinedDate: '2026-01-15',
-        expiryDate: '2027-12-31',
-        remainingDays: 511,
-        status: 'ACTIVE',
-        qrCode: 'AFG-882910'
-      },
-      {
-        id: 'usr_demo_2',
-        membershipId: 'AFG-EXPIRED-99',
-        fullName: 'Marcus Brody',
-        email: 'marcus.brody@example.com',
-        phone: '(555) 888-9900',
-        photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
-        membershipPlan: 'Basic Gym Access',
-        joinedDate: '2024-01-10',
-        expiryDate: '2025-01-15',
-        remainingDays: 0,
-        status: 'EXPIRED',
-        qrCode: 'AFG-EXPIRED-99'
-      }
-    ];
-
-    let filtered = mockMembers;
-    if (status !== 'all') {
-      filtered = filtered.filter(m => m.status.toLowerCase() === status.toLowerCase());
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      filtered = filtered.filter(m => m.fullName.toLowerCase().includes(q) || m.membershipId.toLowerCase().includes(q));
-    }
-
-    return {
-      success: true,
-      count: filtered.length,
-      members: filtered
-    };
-  }
-}
 
 export async function renewMemberSubscription(userId, planName) {
   try {
@@ -460,6 +372,20 @@ export async function sendExpiryNotice(memberId) {
         status: 'DELIVERED ✅'
       }
     };
+  }
+}
+
+export async function fetchUserNotifications() {
+  try {
+    const res = await fetch(`${API_BASE}/user/notifications`, {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { success: false };
+  } catch (err) {
+    return { success: false };
   }
 }
 

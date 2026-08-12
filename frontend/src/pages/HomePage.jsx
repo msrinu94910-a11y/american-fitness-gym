@@ -520,7 +520,7 @@ export default function HomePage({ setActivePage }) {
                 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.75rem 0' }}>
                   <span style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>
-                    ${plan.monthlyPrice}
+                    ₹{plan.monthlyPrice}
                   </span>
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/ month</span>
                 </div>

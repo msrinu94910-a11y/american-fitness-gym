@@ -40,6 +40,9 @@ router.get('/admin/analytics', controller.getAdminAnalytics);
 router.get('/admin/members', controller.getAdminMembers);
 router.post('/admin/generate-qr', controller.generateQRToken);
 router.post('/admin/send-expiry-notice', controller.sendExpiryNotice);
+// Real-Time Push Events Stream & Customer Notifications
+router.get('/events', controller.subscribeEvents);
+router.get('/user/notifications', verifyToken, controller.getUserNotifications);
 router.post('/user/renew-subscription', controller.renewSubscription);
 
 // CMS Dynamic Endpoints

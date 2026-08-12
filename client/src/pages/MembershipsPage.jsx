@@ -3,6 +3,8 @@ import { Check, ChevronDown, ChevronUp, Star, ShieldCheck, ArrowRight, Zap, Crow
 import { fetchMemberships, renewMemberSubscription } from '../services/api';
 import { useApp } from '../context/AppContext';
 
+// High-contrast clean pricing plans component
+
 const DEFAULT_PLANS = [
   {
     id: 'basic-plan',
@@ -227,7 +229,7 @@ export default function MembershipsPage({ setActivePage }) {
                 </p>
 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginBottom: '1.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border-glass)' }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-muted)' }}>$</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-muted)' }}>₹</span>
                   <span style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: '#0f172a', lineHeight: 1 }}>
                     {price}
                   </span>

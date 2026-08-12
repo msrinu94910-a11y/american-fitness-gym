@@ -235,54 +235,6 @@ export default function LoginPage({ setActivePage }) {
             </p>
 
             <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
-              {/* Role Selection Option */}
-              <div>
-                <label style={labelStyle}>Select Account Access Type *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setAccountRole('user')}
-                    style={{
-                      padding: '0.65rem 0.5rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: accountRole === 'user' ? '2px solid #0284C7' : '1px solid var(--border-glass)',
-                      background: accountRole === 'user' ? 'rgba(2, 132, 199, 0.12)' : 'var(--bg-card)',
-                      color: accountRole === 'user' ? '#0284C7' : 'var(--text-muted)',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      transition: 'var(--transition-fast)'
-                    }}
-                  >
-                    <User size={16} /> User Member
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAccountRole('admin')}
-                    style={{
-                      padding: '0.65rem 0.5rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: accountRole === 'admin' ? '2px solid #d97706' : '1px solid var(--border-glass)',
-                      background: accountRole === 'admin' ? 'rgba(217, 119, 6, 0.12)' : 'var(--bg-card)',
-                      color: accountRole === 'admin' ? '#d97706' : 'var(--text-muted)',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      transition: 'var(--transition-fast)'
-                    }}
-                  >
-                    <Lock size={16} /> Admin Officer
-                  </button>
-                </div>
-              </div>
 
               {/* Facility Domain Selection Option */}
               <div>
@@ -353,9 +305,9 @@ export default function LoginPage({ setActivePage }) {
                   onChange={(e) => setSelectedPlan(e.target.value)}
                   style={{ ...inputStyle, paddingLeft: '1rem', appearance: 'none' }}
                 >
-                  <option value="Basic Gym Access">Basic Gym Access ($29/mo)</option>
-                  <option value="Pro Athlete">Pro Athlete ($59/mo - Most Popular)</option>
-                  <option value="VIP Elite">VIP Elite ($99/mo - All Inclusive)</option>
+                  <option value="Basic Gym Access">Basic Gym Access (₹29/mo)</option>
+                  <option value="Pro Athlete">Pro Athlete (₹59/mo - Most Popular)</option>
+                  <option value="VIP Elite">VIP Elite (₹99/mo - All Inclusive)</option>
                 </select>
               </div>
 

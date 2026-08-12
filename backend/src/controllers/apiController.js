@@ -827,6 +827,57 @@ const generateQRToken = (req, res) => {
   });
 };
 
+// Real-Time Server-Sent Events (SSE) Bus & Client Tracker
+let sseClients = [];
+
+const subscribeEvents = (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (res.flushHeaders) res.flushHeaders();
+
+  const clientId = Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  const newClient = { id: clientId, res };
+  sseClients.push(newClient);
+
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', clientId })}\n\n`);
+
+  req.on('close', () => {
+    sseClients = sseClients.filter(c => c.id !== clientId);
+  });
+};
+
+const broadcastRealtimeEvent = (eventType, payload) => {
+  const dataString = JSON.stringify({ type: eventType, payload, timestamp: new Date().toISOString() });
+  sseClients.forEach(client => {
+    try {
+      client.res.write(`data: ${dataString}\n\n`);
+    } catch (err) {}
+  });
+};
+
+// GET User Notifications
+const getUserNotifications = (req, res) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const userNotifs = (store.expiryNotifications || []).filter(
+    n => n.userId === user.id || n.membershipId === user.membershipId || n.membershipId === user.id
+  );
+
+  const currentUser = store.users.find(u => u.id === user.id);
+
+  res.json({
+    success: true,
+    count: userNotifs.length,
+    notifications: userNotifs,
+    lastNoticeSent: currentUser ? currentUser.lastNoticeSent : null,
+    lastNoticeDetails: currentUser ? currentUser.lastNoticeDetails : null
+  });
+};
+
 // POST Send Expiry Notice Message to User (SMS & Email Notification Audit)
 const sendExpiryNotice = (req, res) => {
   const { memberId } = req.body;
@@ -851,10 +902,7 @@ const sendExpiryNotice = (req, res) => {
     message: `Dear ${user.fullName}, your American Fitness Gym ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`
   };
 
-  if (!store.expiryNotifications) {
-    store.expiryNotifications = [];
-  }
-  store.expiryNotifications.unshift({
+  const notificationObj = {
     id: 'notif_' + Date.now(),
     userId: user.id,
     memberName: user.fullName,
@@ -863,6 +911,19 @@ const sendExpiryNotice = (req, res) => {
     sentFormatted,
     message: user.lastNoticeDetails.message,
     status: 'DELIVERED ✅'
+  };
+
+  if (!store.expiryNotifications) {
+    store.expiryNotifications = [];
+  }
+  store.expiryNotifications.unshift(notificationObj);
+
+  // Broadcast Real-Time Push Event to connected subscribers (SSE Stream)
+  broadcastRealtimeEvent('EXPIRY_NOTICE_SENT', {
+    ...notificationObj,
+    userEmail: user.email,
+    userPhone: user.phone,
+    lastNoticeDetails: user.lastNoticeDetails
   });
 
   res.json({
@@ -908,5 +969,7 @@ module.exports = {
   saveService,
   deleteService,
   saveMembership,
-  deleteMembership
+  deleteMembership,
+  subscribeEvents,
+  getUserNotifications
 };

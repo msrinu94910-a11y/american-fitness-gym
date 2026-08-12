@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import jsQR from 'jsqr';
 import { 
-  Camera, QrCode, ShieldCheck, XCircle, AlertTriangle, CheckCircle2, 
+  Camera, QrCode, ShieldCheck, XCircle, AlertTriangle, AlertCircle, CheckCircle2, 
   Clock, User, Search, Sparkles, RefreshCw, Volume2, VolumeX, 
   History, Smartphone, Lock, ArrowRight, ArrowLeft, LogOut, Zap, Check, Users, DollarSign,
   UserCheck, UserX, Calendar, Filter, Image as ImageIcon, Send, CheckCheck, MessageSquare
@@ -438,34 +438,12 @@ export default function MobileScannerPage({ setActivePage }) {
   };
 
    return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#f8fafc',
-      color: '#0f172a',
-      fontFamily: 'var(--font-body)',
-      display: 'flex',
-      flexDirection: 'row'
-    }}>
+    <div className="admin-container">
       {/* 1. Modern Left Sidebar Navigation (White Theme) */}
-      <aside className="admin-sidebar" style={{
-        width: '260px',
-        minWidth: '260px',
-        background: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
-        boxShadow: '4px 0 25px rgba(0, 0, 0, 0.03)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '1.5rem 1rem',
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-        zIndex: 100,
-        flexShrink: 0
-      }}>
+      <aside className="admin-sidebar">
         <div>
           {/* Sidebar Header Brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+          <div className="admin-sidebar-header admin-sidebar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingLeft: '0.5rem' }}>
             <div style={{
               width: '38px',
               height: '38px',
@@ -474,7 +452,8 @@ export default function MobileScannerPage({ setActivePage }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)'
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)',
+              flexShrink: 0
             }}>
               <QrCode size={20} color="#ffffff" />
             </div>
@@ -489,10 +468,10 @@ export default function MobileScannerPage({ setActivePage }) {
           </div>
 
           {/* Navigation Links */}
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', paddingLeft: '0.6rem' }}>
+          <div className="admin-nav-label" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', paddingLeft: '0.6rem' }}>
             MAIN MENU
           </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <nav className="admin-nav-list">
             {[
               { id: 'dashboard', label: 'Overview', icon: ShieldCheck },
               { id: 'scanner', label: 'QR Scanner', icon: QrCode },
@@ -506,6 +485,7 @@ export default function MobileScannerPage({ setActivePage }) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveAdminTab(tab.id)}
+                  className="admin-nav-button"
                   style={{
                     width: '100%',
                     padding: '0.75rem 1rem',
@@ -531,7 +511,7 @@ export default function MobileScannerPage({ setActivePage }) {
         </div>
 
         {/* Sidebar Footer: Admin Profile & Logout */}
-        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+        <div className="admin-sidebar-footer" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem', paddingLeft: '0.5rem' }}>
             <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>
               {user?.name?.[0] || 'A'}
@@ -568,9 +548,9 @@ export default function MobileScannerPage({ setActivePage }) {
       </aside>
 
       {/* 2. Main Admin Workspace Area (White Background) */}
-      <main style={{ flex: 1, padding: '1.5rem 2rem', overflowY: 'auto', minWidth: 0, background: '#f8fafc' }}>
+      <main className="admin-main">
         {/* Metric Analytics Cards Top Bar */}
-        <div style={{
+        <div className="admin-metrics-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
           gap: '1rem',
@@ -598,7 +578,7 @@ export default function MobileScannerPage({ setActivePage }) {
           <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', boxShadow: '0 2px 10px rgba(2,132,199,0.05)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 800 }}>MONTHLY REVENUE</div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>${(analytics.monthlyRevenue || 0).toLocaleString()}</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>₹{(analytics.monthlyRevenue || 0).toLocaleString()}</div>
             </div>
             <DollarSign size={24} color="#0284c7" />
           </div>
@@ -1093,6 +1073,24 @@ export default function MobileScannerPage({ setActivePage }) {
                           const res = await sendExpiryNotice(verificationResult.member?.id || verificationResult.member?.membershipId);
                           if (res.success) {
                             showToast(res.message, 'success');
+                            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                              try {
+                                const channel = new BroadcastChannel('AFG_NOTIFICATIONS_CHANNEL');
+                                channel.postMessage({
+                                  type: 'EXPIRY_NOTICE_SENT',
+                                  payload: {
+                                    userId: verificationResult.member?.id,
+                                    membershipId: verificationResult.member?.membershipId,
+                                    memberName: verificationResult.member?.fullName,
+                                    sentFormatted: res.lastNoticeSent,
+                                    sentAt: res.noticeDetails?.sentAt || new Date().toLocaleString(),
+                                    message: res.noticeDetails?.message,
+                                    lastNoticeDetails: res.noticeDetails
+                                  }
+                                });
+                                channel.close();
+                              } catch (err) {}
+                            }
                             handleVerify(verificationResult.member?.membershipId);
                           }
                         }}
@@ -1332,23 +1330,23 @@ export default function MobileScannerPage({ setActivePage }) {
         {activeAdminTab === 'members' && (
           <div>
             {/* Filter & Search Bar */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', background: 'rgba(15, 23, 42, 0.8)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.15)', flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', background: '#f8fafc', padding: '0.35rem', borderRadius: '14px', border: '1px solid #cbd5e1', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                 <button
                   onClick={() => setMemberFilter('all')}
-                  style={{ flex: 1, padding: '0.4rem 0.6rem', border: 'none', background: memberFilter === 'all' ? '#0284C7' : 'transparent', color: '#ffffff', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '0.65rem 1rem', border: 'none', background: memberFilter === 'all' ? 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)' : 'transparent', color: memberFilter === 'all' ? '#ffffff' : '#475569', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', boxShadow: memberFilter === 'all' ? '0 4px 12px rgba(2,132,199,0.3)' : 'none' }}
                 >
                   All ({membersList.length})
                 </button>
                 <button
                   onClick={() => setMemberFilter('active')}
-                  style={{ flex: 1, padding: '0.4rem 0.6rem', border: 'none', background: memberFilter === 'active' ? '#10b981' : 'transparent', color: '#ffffff', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '0.65rem 1rem', border: 'none', background: memberFilter === 'active' ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent', color: memberFilter === 'active' ? '#ffffff' : '#475569', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', boxShadow: memberFilter === 'active' ? '0 4px 12px rgba(16,185,129,0.3)' : 'none' }}
                 >
                   Active ✅
                 </button>
                 <button
                   onClick={() => setMemberFilter('expired')}
-                  style={{ flex: 1, padding: '0.4rem 0.6rem', border: 'none', background: memberFilter === 'expired' ? '#ef4444' : 'transparent', color: '#ffffff', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '0.65rem 1rem', border: 'none', background: memberFilter === 'expired' ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent', color: memberFilter === 'expired' ? '#ffffff' : '#475569', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', boxShadow: memberFilter === 'expired' ? '0 4px 12px rgba(239,68,68,0.3)' : 'none' }}
                 >
                   Expired ❌
                 </button>
@@ -1362,77 +1360,90 @@ export default function MobileScannerPage({ setActivePage }) {
                   onChange={(e) => setMemberSearch(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.65rem 0.85rem 0.65rem 2.2rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem',
-                    outline: 'none'
+                    padding: '0.75rem 1rem 0.75rem 2.6rem',
+                    borderRadius: '12px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
                   }}
                 />
-                <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <Search size={18} color="#64748b" style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
 
             {/* Member Cards List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {(membersList || []).map((m) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {(membersList || []).length === 0 ? (
+                <div style={{ background: '#ffffff', border: '2px dashed #cbd5e1', borderRadius: '16px', padding: '3.5rem 2rem', textAlign: 'center' }}>
+                  <Users size={48} color="#0284c7" style={{ marginBottom: '1rem' }} />
+                  <h3 style={{ fontSize: '1.3rem', color: '#0f172a', fontWeight: 900, margin: 0 }}>No Registered Members Yet</h3>
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.5rem', maxWidth: '450px', marginLeft: 'auto', marginRight: 'auto' }}>
+                    All demo data has been cleared. When new users register, their real account profile, subscription plan, and QR pass will appear here in real-time.
+                  </p>
+                </div>
+              ) : (
+                (membersList || []).map((m) => (
                 <div
                   key={m.id}
-                  className="glass-card"
                   style={{
-                    padding: '1.25rem',
-                    borderRadius: 'var(--radius-md)',
-                    borderLeft: m.status === 'ACTIVE' ? '4px solid #10b981' : '4px solid #ef4444',
-                    background: 'rgba(15, 23, 42, 0.85)'
+                    padding: '1.5rem',
+                    borderRadius: '16px',
+                    borderLeft: m.status === 'ACTIVE' ? '6px solid #10b981' : '6px solid #ef4444',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
                   }}
                 >
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.85rem' }}>
+                  <div style={{ display: 'flex', gap: '1.1rem', alignItems: 'center', marginBottom: '1rem' }}>
                     <img
                       src={m.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'}
                       alt={m.fullName}
-                      style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: m.status === 'ACTIVE' ? '2px solid #10b981' : '2px solid #ef4444' }}
+                      style={{ width: '62px', height: '62px', borderRadius: '50%', objectFit: 'cover', border: m.status === 'ACTIVE' ? '3px solid #10b981' : '3px solid #ef4444', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                     />
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h4 style={{ fontSize: '1.1rem', margin: 0, color: '#ffffff', fontWeight: 800 }}>{m.fullName}</h4>
-                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '12px', background: m.status === 'ACTIVE' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)', color: m.status === 'ACTIVE' ? '#6ee7b7' : '#fca5a5', fontSize: '0.72rem', fontWeight: 800 }}>
+                        <h4 style={{ fontSize: '1.2rem', margin: 0, color: '#0f172a', fontWeight: 900 }}>{m.fullName}</h4>
+                        <span style={{ padding: '0.35rem 0.85rem', borderRadius: '12px', background: m.status === 'ACTIVE' ? '#ecfdf5' : '#fef2f2', border: m.status === 'ACTIVE' ? '1px solid #a7f3d0' : '1px solid #fecaca', color: m.status === 'ACTIVE' ? '#047857' : '#b91c1c', fontSize: '0.78rem', fontWeight: 900 }}>
                           {m.status === 'ACTIVE' ? 'ACTIVE ✅' : 'EXPIRED ❌'}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.78rem', color: '#fbbf24', marginTop: '0.2rem' }}>{m.membershipPlan}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.1rem', fontFamily: 'monospace' }}>ID: {m.membershipId}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#0284c7', fontWeight: 800, marginTop: '0.2rem' }}>{m.membershipPlan}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem', fontFamily: 'monospace', fontWeight: 700 }}>ID: {m.membershipId}</div>
                     </div>
                   </div>
 
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.65rem' }}>
-                    <span>Expiry: <strong style={{ color: '#ffffff' }}>{m.expiryDate}</strong></span>
-                    <span>Remaining: <strong style={{ color: m.status === 'ACTIVE' ? '#34d399' : '#ef4444' }}>{m.remainingDays} Days</strong></span>
+                  {/* Expiry & Days Remaining Bar */}
+                  <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.85rem' }}>
+                    <span style={{ color: '#475569', fontWeight: 700 }}>Expiry: <strong style={{ color: '#0f172a', fontWeight: 900 }}>{m.expiryDate}</strong></span>
+                    <span style={{ color: '#475569', fontWeight: 700 }}>Remaining: <strong style={{ color: m.status === 'ACTIVE' ? '#059669' : '#dc2626', fontWeight: 900 }}>{m.remainingDays} Days</strong></span>
                   </div>
 
-                  {/* Expiry Notification Delivery Status Indicator ("Message Sent or Not") */}
+                  {/* Expiry Notification Delivery Status Indicator */}
                   {m.status === 'EXPIRED' && (
                     <div style={{
-                      background: m.lastNoticeSent ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                      border: m.lastNoticeSent ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      marginBottom: '0.75rem',
-                      fontSize: '0.78rem',
+                      background: m.lastNoticeSent ? '#f0fdf4' : '#fffbeb',
+                      border: m.lastNoticeSent ? '1.5px solid #bbf7d0' : '1.5px solid #fef3c7',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '12px',
+                      marginBottom: '1rem',
+                      fontSize: '0.85rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       flexWrap: 'wrap',
-                      gap: '0.4rem'
+                      gap: '0.6rem'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: m.lastNoticeSent ? '#6ee7b7' : '#fde68a', fontWeight: 700 }}>
-                        {m.lastNoticeSent ? <CheckCheck size={16} color="#34d399" /> : <Clock size={16} color="#fbbf24" />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: m.lastNoticeSent ? '#15803d' : '#b45309', fontWeight: 800 }}>
+                        {m.lastNoticeSent ? <CheckCheck size={18} color="#16a34a" /> : <Clock size={18} color="#d97706" />}
                         <span>Notice Status: <strong>{m.lastNoticeSent ? `SENT TO USER ✅ (${m.lastNoticeSent})` : 'NOT SENT YET ⏳'}</strong></span>
                       </div>
 
                       {m.lastNoticeSent && (
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
                             onClick={() => setNoticeModalData({
                               memberName: m.fullName,
@@ -1442,14 +1453,15 @@ export default function MobileScannerPage({ setActivePage }) {
                               message: m.lastNoticeDetails?.message || `Dear ${m.fullName}, your ${m.membershipPlan} membership expired on ${m.expiryDate}. Please renew to maintain facility access.`
                             })}
                             style={{
-                              background: 'rgba(255, 255, 255, 0.15)',
-                              border: '1px solid rgba(255, 255, 255, 0.3)',
-                              borderRadius: '4px',
-                              padding: '0.25rem 0.6rem',
-                              fontSize: '0.72rem',
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '8px',
+                              padding: '0.35rem 0.75rem',
+                              fontSize: '0.75rem',
                               fontWeight: 800,
-                              color: '#ffffff',
-                              cursor: 'pointer'
+                              color: '#334155',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
                             }}
                           >
                             Message Log 💬
@@ -1463,13 +1475,13 @@ export default function MobileScannerPage({ setActivePage }) {
                             style={{
                               background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
                               border: 'none',
-                              borderRadius: '4px',
-                              padding: '0.25rem 0.65rem',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
+                              borderRadius: '8px',
+                              padding: '0.35rem 0.85rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 900,
                               color: '#ffffff',
                               cursor: 'pointer',
-                              boxShadow: '0 2px 6px rgba(2,132,199,0.3)'
+                              boxShadow: '0 2px 8px rgba(2,132,199,0.3)'
                             }}
                           >
                             User Dashboard 👁️
@@ -1479,8 +1491,8 @@ export default function MobileScannerPage({ setActivePage }) {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {/* Equal & Professional Action Buttons Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                     <button
                       onClick={async () => {
                         const res = await generateMemberQRToken(m.membershipId);
@@ -1488,10 +1500,23 @@ export default function MobileScannerPage({ setActivePage }) {
                           setGeneratedQRModal(res);
                         }
                       }}
-                      className="btn btn-secondary"
-                      style={{ flex: 1, padding: '0.5rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
+                      style={{
+                        padding: '0.65rem 0.85rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        color: '#0f172a',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                      }}
                     >
-                      <QrCode size={14} /> Generate QR
+                      <QrCode size={16} color="#0284c7" /> Generate QR
                     </button>
 
                     {m.status === 'EXPIRED' && (
@@ -1500,33 +1525,47 @@ export default function MobileScannerPage({ setActivePage }) {
                           onClick={async () => {
                             const res = await sendExpiryNotice(m.id);
                             if (res.success) {
-                              showToast(res.message, 'success');
+                              showToast(`Expiry notice sent to ${m.fullName}! Delivered to user dashboard.`, 'success');
                               loadDashboardData();
-                              setUserDashboardPreviewModal({
-                                member: m,
-                                sentFormatted: res.lastNoticeSent,
-                                message: res.noticeDetails?.message || `Dear ${m.fullName}, your ${m.membershipPlan} membership expired on ${m.expiryDate}. Please renew your plan to restore 24/7 facility access.`
-                              });
+                              if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                                try {
+                                  const channel = new BroadcastChannel('AFG_NOTIFICATIONS_CHANNEL');
+                                  channel.postMessage({
+                                    type: 'EXPIRY_NOTICE_SENT',
+                                    payload: {
+                                      userId: m.id,
+                                      membershipId: m.membershipId || m.id,
+                                      memberName: m.fullName,
+                                      userEmail: m.email,
+                                      userPhone: m.phone,
+                                      sentFormatted: res.lastNoticeSent,
+                                      sentAt: res.noticeDetails?.sentAt || new Date().toLocaleString(),
+                                      message: res.noticeDetails?.message || `Dear ${m.fullName}, your ${m.membershipPlan} membership expired on ${m.expiryDate}. Please renew your plan to restore 24/7 facility access.`,
+                                      lastNoticeDetails: res.noticeDetails
+                                    }
+                                  });
+                                  channel.close();
+                                } catch (err) {}
+                              }
                             }
                           }}
                           style={{
-                            flex: 1,
-                            padding: '0.5rem',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            background: m.lastNoticeSent ? 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)' : 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                            padding: '0.65rem 0.85rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 900,
+                            background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
                             color: '#ffffff',
                             border: 'none',
-                            borderRadius: 'var(--radius-md)',
+                            borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.3rem',
-                            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                            gap: '0.4rem',
+                            boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
                           }}
                         >
-                          <Send size={14} /> {m.lastNoticeSent ? 'Resend Notice' : 'Send Expiry Notice'}
+                          <Send size={16} /> {m.lastNoticeSent ? 'Resend Notice' : 'Send Expiry Notice'}
                         </button>
 
                         <button
@@ -1537,34 +1576,48 @@ export default function MobileScannerPage({ setActivePage }) {
                               loadDashboardData();
                             }
                           }}
-                          className="btn btn-gold"
-                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
+                          style={{
+                            padding: '0.65rem 0.85rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 900,
+                            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.4rem',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
+                          }}
                         >
-                          <RefreshCw size={14} /> Renew +1 Yr
+                          <RefreshCw size={16} /> Renew +1 Yr
                         </button>
                       </>
                     )}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         )}
 
         {/* TAB 4: CMS CONTENT MANAGER */}
         {activeAdminTab === 'cms' && (
-          <div className="glass-card" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid #f59e0b' }}>
+          <div style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 4px 25px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.4rem', color: '#ffffff', fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Sparkles color="#f59e0b" size={22} /> DYNAMIC CMS REAL-TIME MANAGER
+                <h3 style={{ fontSize: '1.4rem', color: '#0f172a', fontFamily: 'var(--font-heading)', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles color="#0284c7" size={22} /> DYNAMIC CMS REAL-TIME MANAGER
                 </h3>
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                <p style={{ color: '#475569', fontSize: '0.88rem', fontWeight: 600, margin: '0.25rem 0 0 0' }}>
                   Add, edit, or remove website content across Homepage, Services, and Memberships in real-time.
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.5)', padding: '0.35rem', borderRadius: 'var(--radius-full)' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.35rem', borderRadius: 'var(--radius-full)', border: '1px solid #cbd5e1' }}>
                 {[
                   { id: 'homepage', label: '🏠 Homepage' },
                   { id: 'services', label: `⚡ Services (${cmsData?.services?.length || 0})` },
@@ -1574,14 +1627,15 @@ export default function MobileScannerPage({ setActivePage }) {
                     key={sub.id}
                     onClick={() => setCmsSubTab(sub.id)}
                     style={{
-                      padding: '0.45rem 0.9rem',
+                      padding: '0.45rem 0.95rem',
                       borderRadius: 'var(--radius-full)',
                       border: 'none',
-                      background: cmsSubTab === sub.id ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'transparent',
-                      color: cmsSubTab === sub.id ? '#ffffff' : '#94a3b8',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
+                      background: cmsSubTab === sub.id ? 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)' : 'transparent',
+                      color: cmsSubTab === sub.id ? '#ffffff' : '#475569',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      boxShadow: cmsSubTab === sub.id ? '0 4px 15px rgba(2, 132, 199, 0.35)' : 'none'
                     }}
                   >
                     {sub.label}
@@ -1592,77 +1646,77 @@ export default function MobileScannerPage({ setActivePage }) {
 
             {/* SUB-TAB 1: HOMEPAGE EDITOR */}
             {cmsSubTab === 'homepage' && (
-              <form onSubmit={(e) => { e.preventDefault(); updateHomepageCMS(hpForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <form onSubmit={(e) => { e.preventDefault(); updateHomepageCMS(hpForm); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Welcome Badge Tagline</label>
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.4rem' }}>Welcome Badge Tagline</label>
                   <input
                     type="text"
                     value={hpForm.welcomeTag}
                     onChange={(e) => setHpForm({ ...hpForm, welcomeTag: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, fontSize: '0.92rem' }}
                   />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Main Headline (Line 1)</label>
+                    <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.4rem' }}>Main Headline (Line 1)</label>
                     <input
                       type="text"
                       value={hpForm.headlineMain}
                       onChange={(e) => setHpForm({ ...hpForm, headlineMain: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, fontSize: '0.92rem' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Sub Headline Gradient (Line 2)</label>
+                    <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.4rem' }}>Sub Headline Gradient (Line 2)</label>
                     <input
                       type="text"
                       value={hpForm.headlineSub}
                       onChange={(e) => setHpForm({ ...hpForm, headlineSub: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#38bdf8', fontWeight: 700, fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0284c7', fontWeight: 800, fontSize: '0.92rem' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Hero Description Paragraph</label>
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.4rem' }}>Hero Description Paragraph</label>
                   <textarea
                     rows={4}
                     value={hpForm.description}
                     onChange={(e) => setHpForm({ ...hpForm, description: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem', lineHeight: '1.5' }}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, fontSize: '0.92rem', lineHeight: '1.5' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Hero Image Source URL</label>
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.4rem' }}>Hero Image Source URL</label>
                   <input
                     type="text"
                     value={hpForm.heroImage}
                     onChange={(e) => setHpForm({ ...hpForm, heroImage: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem', marginBottom: '0.5rem' }}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.65rem' }}
                   />
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => setHpForm({ ...hpForm, heroImage: '/hero-gym-arena.png' })} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
+                    <button type="button" onClick={() => setHpForm({ ...hpForm, heroImage: '/hero-gym-arena.png' })} style={{ background: '#e0f2fe', border: '1px solid #bae6fd', color: '#0284c7', fontSize: '0.78rem', fontWeight: 800, padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer' }}>
                       Set Generated Gym Arena Image
                     </button>
-                    <button type="button" onClick={() => setHpForm({ ...hpForm, heroImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80' })} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
+                    <button type="button" onClick={() => setHpForm({ ...hpForm, heroImage: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80' })} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', fontSize: '0.78rem', fontWeight: 800, padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer' }}>
                       Set Dumbbell Rack Photo
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Primary CTA Button Label</label>
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.4rem' }}>Primary CTA Button Label</label>
                   <input
                     type="text"
                     value={hpForm.ctaText}
                     onChange={(e) => setHpForm({ ...hpForm, ctaText: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, fontSize: '0.92rem' }}
                   />
                 </div>
 
-                <button type="submit" className="btn btn-gold" style={{ padding: '0.9rem', fontSize: '1rem', fontWeight: 800 }}>
+                <button type="submit" style={{ padding: '0.9rem', fontSize: '1rem', fontWeight: 900, background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)' }}>
                   💾 Save Homepage Content Live
                 </button>
               </form>
@@ -1672,7 +1726,7 @@ export default function MobileScannerPage({ setActivePage }) {
             {cmsSubTab === 'services' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h4 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>Active Fitness Services</h4>
+                  <h4 style={{ color: '#0f172a', fontSize: '1.2rem', margin: 0, fontWeight: 900 }}>Active Fitness Services</h4>
                   <button
                     onClick={() => {
                       setEditingService({
@@ -1687,8 +1741,7 @@ export default function MobileScannerPage({ setActivePage }) {
                       });
                       setServiceModalOpen(true);
                     }}
-                    className="btn btn-gold"
-                    style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                    style={{ background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', color: '#ffffff', fontWeight: 800, fontSize: '0.88rem', padding: '0.6rem 1.25rem', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2,132,199,0.3)' }}
                   >
                     + Add New Service
                   </button>
@@ -1696,13 +1749,13 @@ export default function MobileScannerPage({ setActivePage }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
                   {cmsData?.services?.map((s) => (
-                    <div key={s.id} className="glass-card" style={{ padding: '1rem', background: 'rgba(30,41,59,0.7)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column' }}>
-                      <img src={s.image} alt={s.title} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', marginBottom: '0.75rem' }} />
-                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: s.color || '#0284C7', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{s.badge}</div>
-                      <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: '0 0 0.4rem 0', fontWeight: 800 }}>{s.title}</h4>
-                      <p style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.4', flex: 1, marginBottom: '0.85rem' }}>{s.description}</p>
+                    <div key={s.id} style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1px solid #cbd5e1', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column' }}>
+                      <img src={s.image} alt={s.title} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.85rem' }} />
+                      <div style={{ fontSize: '0.75rem', fontWeight: 900, color: s.color || '#0284C7', textTransform: 'uppercase', marginBottom: '0.35rem', letterSpacing: '0.05em' }}>{s.badge}</div>
+                      <h4 style={{ color: '#0f172a', fontSize: '1.15rem', margin: '0 0 0.4rem 0', fontWeight: 900 }}>{s.title}</h4>
+                      <p style={{ color: '#334155', fontSize: '0.88rem', fontWeight: 600, lineHeight: '1.5', flex: 1, marginBottom: '1rem' }}>{s.description}</p>
                       
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={() => {
                             setEditingService({
@@ -1711,15 +1764,13 @@ export default function MobileScannerPage({ setActivePage }) {
                             });
                             setServiceModalOpen(true);
                           }}
-                          className="btn btn-secondary"
-                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem' }}
+                          style={{ flex: 1, fontSize: '0.82rem', fontWeight: 800, padding: '0.55rem', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '10px', cursor: 'pointer' }}
                         >
                           ✏️ Edit
                         </button>
                         <button
                           onClick={() => deleteServiceCMS(s.id)}
-                          className="btn btn-secondary"
-                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                          style={{ flex: 1, fontSize: '0.82rem', fontWeight: 800, padding: '0.55rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', cursor: 'pointer' }}
                         >
                           🗑️ Delete
                         </button>
@@ -1734,7 +1785,7 @@ export default function MobileScannerPage({ setActivePage }) {
             {cmsSubTab === 'memberships' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h4 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>Membership Plans</h4>
+                  <h4 style={{ color: '#0f172a', fontSize: '1.2rem', margin: 0, fontWeight: 900 }}>Membership Plans</h4>
                   <button
                     onClick={() => {
                       setEditingMembership({
@@ -1751,8 +1802,7 @@ export default function MobileScannerPage({ setActivePage }) {
                       });
                       setMembershipModalOpen(true);
                     }}
-                    className="btn btn-gold"
-                    style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                    style={{ background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', color: '#ffffff', fontWeight: 800, fontSize: '0.88rem', padding: '0.6rem 1.25rem', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(2,132,199,0.3)' }}
                   >
                     + Add New Plan
                   </button>
@@ -1760,27 +1810,31 @@ export default function MobileScannerPage({ setActivePage }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
                   {cmsData?.memberships?.map((m) => (
-                    <div key={m.id} className="glass-card" style={{ padding: '1.25rem', background: 'rgba(30,41,59,0.7)', borderRadius: 'var(--radius-md)', border: m.popular ? '2px solid #f59e0b' : '1px solid var(--border-glass)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>{m.badge}</span>
-                        {m.popular && <span style={{ background: '#f59e0b', color: '#000000', fontSize: '0.65rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '10px' }}>POPULAR</span>}
+                    <div key={m.id} style={{ padding: '1.5rem', background: '#ffffff', borderRadius: '16px', border: m.popular ? '2px solid #0284c7' : '1px solid #cbd5e1', boxShadow: '0 6px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.badge}</span>
+                        {m.popular && <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.68rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '12px' }}>MOST POPULAR</span>}
                       </div>
-                      <h4 style={{ color: '#ffffff', fontSize: '1.2rem', margin: '0 0 0.4rem 0', fontWeight: 900 }}>{m.name}</h4>
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.65rem', flexWrap: 'wrap', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)' }}>
-                        <div>
-                          <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Monthly Rate</span>
-                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#38bdf8' }}>${m.monthlyPrice}</span>
-                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>/mo</span>
-                        </div>
-                        <div style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '1rem' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#6ee7b7', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Annual Rate</span>
-                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#34d399' }}>${m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
-                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>/mo</span>
-                        </div>
-                      </div>
-                      <p style={{ color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '1rem', lineHeight: '1.4' }}>{m.description}</p>
+                      <h4 style={{ color: '#0f172a', fontSize: '1.3rem', margin: '0.2rem 0 0.6rem 0', fontWeight: 900 }}>{m.name}</h4>
                       
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {/* High-Contrast Rate Card */}
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.85rem', flexWrap: 'wrap', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div>
+                          <span style={{ fontSize: '0.72rem', color: '#475569', display: 'block', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Monthly Rate</span>
+                          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0284c7' }}>₹{m.monthlyPrice}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>/mo</span>
+                        </div>
+                        <div style={{ borderLeft: '1.5px solid #cbd5e1', paddingLeft: '1rem' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#166534', display: 'block', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Annual Rate</span>
+                          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#059669' }}>₹{m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>/mo</span>
+                        </div>
+                      </div>
+
+                      {/* 100% Readable Bold Description Text */}
+                      <p style={{ color: '#1e293b', fontSize: '0.9rem', fontWeight: 600, flex: 1, marginBottom: '1.25rem', lineHeight: '1.5' }}>{m.description}</p>
+                      
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
                         <button
                           onClick={() => {
                             setEditingMembership({
@@ -1789,15 +1843,13 @@ export default function MobileScannerPage({ setActivePage }) {
                             });
                             setMembershipModalOpen(true);
                           }}
-                          className="btn btn-secondary"
-                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem' }}
+                          style={{ flex: 1, fontSize: '0.85rem', fontWeight: 800, padding: '0.6rem', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '10px', cursor: 'pointer' }}
                         >
                           ✏️ Edit Plan
                         </button>
                         <button
                           onClick={() => deleteMembershipCMS(m.id)}
-                          className="btn btn-secondary"
-                          style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.4)' }}
+                          style={{ flex: 1, fontSize: '0.85rem', fontWeight: 800, padding: '0.6rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', cursor: 'pointer' }}
                         >
                           🗑️ Delete
                         </button>
@@ -1812,9 +1864,9 @@ export default function MobileScannerPage({ setActivePage }) {
 
       {/* SERVICE EDIT MODAL */}
       {serviceModalOpen && editingService && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-          <div className="glass-card" style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: 'rgba(15, 23, 42, 0.98)', border: '1px solid #f59e0b', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', borderRadius: '18px', background: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 20px 50px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.35rem', color: '#0f172a', fontWeight: 900, fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>
               {editingService.id ? 'Edit Service' : 'Add New Fitness Service'}
             </h3>
             
@@ -1825,35 +1877,35 @@ export default function MobileScannerPage({ setActivePage }) {
               setServiceModalOpen(false);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Service Title</label>
-                <input type="text" required value={editingService.title} onChange={(e) => setEditingService({ ...editingService, title: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Service Title</label>
+                <input type="text" required value={editingService.title} onChange={(e) => setEditingService({ ...editingService, title: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Badge Text</label>
-                  <input type="text" value={editingService.badge} onChange={(e) => setEditingService({ ...editingService, badge: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Badge Text</label>
+                  <input type="text" value={editingService.badge} onChange={(e) => setEditingService({ ...editingService, badge: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Theme Color (Hex)</label>
-                  <input type="text" value={editingService.color} onChange={(e) => setEditingService({ ...editingService, color: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#38bdf8' }} />
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Theme Color (Hex)</label>
+                  <input type="text" value={editingService.color} onChange={(e) => setEditingService({ ...editingService, color: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0284c7', fontWeight: 800 }} />
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Image Source URL</label>
-                <input type="text" value={editingService.image} onChange={(e) => setEditingService({ ...editingService, image: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Image Source URL</label>
+                <input type="text" value={editingService.image} onChange={(e) => setEditingService({ ...editingService, image: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Description</label>
-                <textarea rows={3} value={editingService.description} onChange={(e) => setEditingService({ ...editingService, description: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Description</label>
+                <textarea rows={3} value={editingService.description} onChange={(e) => setEditingService({ ...editingService, description: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, lineHeight: 1.5 }} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Key Perks / Highlights (1 per line)</label>
-                <textarea rows={4} value={editingService.perksText} onChange={(e) => setEditingService({ ...editingService, perksText: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Key Perks / Highlights (1 per line)</label>
+                <textarea rows={4} value={editingService.perksText} onChange={(e) => setEditingService({ ...editingService, perksText: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, lineHeight: 1.5 }} />
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setServiceModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>Save Service</button>
+                <button type="button" onClick={() => setServiceModalOpen(false)} style={{ flex: 1, padding: '0.75rem', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 800, borderRadius: '10px', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', border: 'none', color: '#ffffff', fontWeight: 900, borderRadius: '10px', cursor: 'pointer' }}>Save Service</button>
               </div>
             </form>
           </div>
@@ -1862,9 +1914,9 @@ export default function MobileScannerPage({ setActivePage }) {
 
       {/* MEMBERSHIP EDIT MODAL */}
       {membershipModalOpen && editingMembership && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-          <div className="glass-card" style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: 'rgba(15, 23, 42, 0.98)', border: '1px solid #f59e0b', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ maxWidth: '550px', width: '100%', padding: '1.75rem', borderRadius: '18px', background: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 20px 50px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.35rem', color: '#0f172a', fontWeight: 900, fontFamily: 'var(--font-heading)', marginBottom: '1rem' }}>
               {editingMembership.id ? 'Edit Membership Plan' : 'Add New Membership Plan'}
             </h3>
             
@@ -1875,41 +1927,41 @@ export default function MobileScannerPage({ setActivePage }) {
               setMembershipModalOpen(false);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Plan Name</label>
-                <input type="text" required value={editingMembership.name} onChange={(e) => setEditingMembership({ ...editingMembership, name: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Plan Name</label>
+                <input type="text" required value={editingMembership.name} onChange={(e) => setEditingMembership({ ...editingMembership, name: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Monthly Price ($)</label>
-                  <input type="number" required value={editingMembership.monthlyPrice} onChange={(e) => setEditingMembership({ ...editingMembership, monthlyPrice: Number(e.target.value) })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Monthly Price (₹)</label>
+                  <input type="number" required value={editingMembership.monthlyPrice} onChange={(e) => setEditingMembership({ ...editingMembership, monthlyPrice: Number(e.target.value) })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Annual Price ($/mo)</label>
-                  <input type="number" required value={editingMembership.annualPrice} onChange={(e) => setEditingMembership({ ...editingMembership, annualPrice: Number(e.target.value) })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Annual Price (₹/mo)</label>
+                  <input type="number" required value={editingMembership.annualPrice} onChange={(e) => setEditingMembership({ ...editingMembership, annualPrice: Number(e.target.value) })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Badge Text</label>
-                  <input type="text" value={editingMembership.badge} onChange={(e) => setEditingMembership({ ...editingMembership, badge: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                  <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Badge Text</label>
+                  <input type="text" value={editingMembership.badge} onChange={(e) => setEditingMembership({ ...editingMembership, badge: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
                   <input type="checkbox" id="popCheck" checked={editingMembership.popular} onChange={(e) => setEditingMembership({ ...editingMembership, popular: e.target.checked })} />
-                  <label htmlFor="popCheck" style={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>Mark as Popular</label>
+                  <label htmlFor="popCheck" style={{ color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer' }}>Mark as Popular</label>
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Description</label>
-                <textarea rows={2} value={editingMembership.description} onChange={(e) => setEditingMembership({ ...editingMembership, description: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Description</label>
+                <textarea rows={2} value={editingMembership.description} onChange={(e) => setEditingMembership({ ...editingMembership, description: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, lineHeight: 1.5 }} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#cbd5e1', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Features List (1 per line)</label>
-                <textarea rows={4} value={editingMembership.featuresText} onChange={(e) => setEditingMembership({ ...editingMembership, featuresText: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: 'var(--radius-sm)', background: 'rgba(30,41,59,0.8)', border: '1px solid var(--border-glass)', color: '#ffffff' }} />
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.88rem', fontWeight: 800, marginBottom: '0.35rem' }}>Features List (1 per line)</label>
+                <textarea rows={4} value={editingMembership.featuresText} onChange={(e) => setEditingMembership({ ...editingMembership, featuresText: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, lineHeight: 1.5 }} />
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setMembershipModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>Save Plan</button>
+                <button type="button" onClick={() => setMembershipModalOpen(false)} style={{ flex: 1, padding: '0.75rem', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 800, borderRadius: '10px', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', border: 'none', color: '#ffffff', fontWeight: 900, borderRadius: '10px', cursor: 'pointer' }}>Save Plan</button>
               </div>
             </form>
           </div>
@@ -2034,10 +2086,10 @@ export default function MobileScannerPage({ setActivePage }) {
             <div style={{
               padding: '1.5rem',
               marginBottom: '1.5rem',
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%)',
-              border: '2px solid #ef4444',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+              border: '2px solid #0284c7',
               borderRadius: 'var(--radius-lg)',
-              boxShadow: '0 8px 30px rgba(239, 68, 68, 0.3)',
+              boxShadow: '0 8px 30px rgba(2, 132, 199, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -2045,19 +2097,19 @@ export default function MobileScannerPage({ setActivePage }) {
               gap: '1.25rem'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '260px' }}>
-                <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#ef4444', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(239,68,68,0.5)' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(2, 132, 199, 0.5)' }}>
                   <AlertCircle size={28} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fca5a5', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>⚠️ MEMBERSHIP EXPIRY NOTICE FROM ADMIN</span>
+                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ffffff', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ color: '#ffffff', fontWeight: 900 }}>⚠️ MEMBERSHIP EXPIRY NOTICE FROM ADMIN</span>
                     <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', color: '#ffffff' }}>{userDashboardPreviewModal.sentFormatted}</span>
                   </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: '1.02rem', fontWeight: 800, color: '#ffffff', marginTop: '0.3rem', lineHeight: 1.45 }}>
                     {userDashboardPreviewModal.message}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
-                    📩 Delivered via SMS & Email to <strong>{userDashboardPreviewModal.member?.email}</strong> • <strong>{userDashboardPreviewModal.member?.phone || '(555) 888-9900'}</strong>
+                  <div style={{ fontSize: '0.8rem', color: '#93c5fd', marginTop: '0.4rem' }}>
+                    📩 Delivered via SMS & Email to <strong style={{ color: '#ffffff' }}>{userDashboardPreviewModal.member?.email}</strong> • <strong style={{ color: '#ffffff' }}>{userDashboardPreviewModal.member?.phone || '(555) 888-9900'}</strong>
                   </div>
                 </div>
               </div>

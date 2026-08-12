@@ -147,8 +147,8 @@
       "id": "basic-plan",
       "name": "Basic Gym Access",
       "tier": "basic",
-      "monthlyPrice": 39,
-      "annualPrice": 29,
+      "monthlyPrice": 999,
+      "annualPrice": 899,
       "badge": "STARTER",
       "description": "Perfect for independent training with full access to main weight floor and cardio equipment.",
       "popular": false,
@@ -163,30 +163,11 @@
       "featuresText": "Access to Main Weight Floor & Cardio Deck\nLocker Room & Shower Access\nFree Initial Fitness Assessment\n24/7 Facility Access Keycard\nMobile App Workout Tracking"
     },
     {
-      "id": "pro-plan",
-      "name": "Pro Athlete",
-      "tier": "pro",
-      "monthlyPrice": 69,
-      "annualPrice": 55,
-      "badge": "MOST POPULAR",
-      "description": "The complete athletic package including unlimited facility zones and recovery spa.",
-      "popular": true,
-      "features": [
-        "Everything in Basic Plan",
-        "Steam Room, Sauna & Hydromassage Spa",
-        "1 Free Monthly Fitness Coaching Consultation",
-        "Guest Pass (2 Guests per month)",
-        "Free Smoothie at Fuel Bar on Sign-up"
-      ],
-      "ctaText": "Claim Pro Membership",
-      "featuresText": "Everything in Basic Plan\nSteam Room, Sauna & Hydromassage Spa\n1 Free Monthly Fitness Coaching Consultation\nGuest Pass (2 Guests per month)\nFree Smoothie at Fuel Bar on Sign-up"
-    },
-    {
       "id": "vip-plan",
       "name": "VIP Elite",
       "tier": "vip",
-      "monthlyPrice": 99,
-      "annualPrice": 79,
+      "monthlyPrice": 1299,
+      "annualPrice": 1199,
       "badge": "VIP ELITE",
       "description": "All-inclusive premium experience with dedicated coach, private lockers, and custom nutrition.",
       "popular": false,
@@ -200,6 +181,22 @@
       ],
       "ctaText": "Join VIP Elite",
       "featuresText": "Everything in Pro Plan\n2 Monthly 1-on-1 Personal Coaching Sessions\nCustomized Meal & Supplement Blueprint\nPermanent Reserved VIP Locker & Towel Service\nUnlimited Guest Passes (1 Guest every visit)\n15% Off All Gym Merchandise & Supplements"
+    },
+    {
+      "id": "mem_1786523589158",
+      "name": "MOST POPULAR  Pro athlete",
+      "tier": "custom",
+      "monthlyPrice": 1099,
+      "annualPrice": 999,
+      "badge": "SPECIAL",
+      "popular": false,
+      "description": "The complete athletic package including unlimited facility zones and recovery spa.\n",
+      "ctaText": "Join Plan",
+      "featuresText": "24/7 Access to Main Weight Floor\nLocker Room Access",
+      "features": [
+        "24/7 Access to Main Weight Floor",
+        "Locker Room Access"
+      ]
     }
   ]
 }

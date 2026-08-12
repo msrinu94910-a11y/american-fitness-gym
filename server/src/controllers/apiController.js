@@ -80,48 +80,44 @@ const loginUser = (req, res) => {
   }
 
   const cleanEmail = email.toLowerCase().trim();
+  const isAdminRequest = cleanEmail.includes('admin') || cleanEmail === 'admin@gmail.com' || cleanEmail === 'admin@americanfitness.com' || role === 'admin';
   let user = store.users.find(u => u.email.toLowerCase() === cleanEmail);
 
   if (!user) {
-    // Automatically provision a new user/admin account if not pre-seeded
-    const isAdmin = cleanEmail.includes('admin') || role === 'admin';
-    const namePart = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ');
-    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    const memNum = Math.floor(100000 + Math.random() * 900000);
-    const code = `AFG-${memNum}`;
-
-    user = {
-      id: 'usr_' + Date.now(),
-      fullName: formattedName || 'Gym Member',
-      email: cleanEmail,
-      password: password,
-      phone: '(555) 000-0000',
-      membershipPlan: isAdmin ? 'Staff Admin' : 'Pro Athlete VIP',
-      membershipId: code,
-      qrCode: code,
-      role: isAdmin ? 'admin' : 'user',
-      status: 'ACTIVE_MEMBER',
-      joinedDate: new Date().toISOString().split('T')[0],
-      expiryDate: '2027-12-31',
-      emergencyContact: 'Not provided',
-      fitnessGoal: 'General Health & Fitness',
-      totalCheckIns: 1,
-      rewardPoints: 100,
-      workoutStreakDays: 1
-    };
-    store.users.push(user);
-  } else {
-    // Update password or role if provided during login
-    user.password = password;
-    if (!user.membershipId) {
+    if (isAdminRequest) {
       const memNum = Math.floor(100000 + Math.random() * 900000);
-      user.membershipId = user.qrCode || `AFG-${memNum}`;
-      user.qrCode = user.membershipId;
+      user = {
+        id: 'usr_admin_' + Date.now(),
+        membershipId: `AFG-ADMIN-${memNum}`,
+        fullName: 'Admin Verification Officer',
+        email: cleanEmail,
+        password: password,
+        phone: '(555) 999-0000',
+        membershipPlan: 'Staff Administrator',
+        status: 'ACTIVE_MEMBER',
+        joinedDate: new Date().toISOString().split('T')[0],
+        expiryDate: '2030-12-31',
+        qrCode: `AFG-ADMIN-${memNum}`,
+        role: 'admin'
+      };
+      store.users.push(user);
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No account found with this email address. Please register a new account.'
+      });
+    }
+  } else {
+    if (user.password && user.password !== password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Incorrect password. Please check your credentials.'
+      });
     }
   }
 
   const { password: _, ...userWithoutPassword } = user;
-  const effectiveRole = role === 'admin' || user.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
+  const effectiveRole = user.role || (isAdminRequest ? 'admin' : 'user');
   userWithoutPassword.role = effectiveRole;
 
   const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
@@ -947,6 +943,57 @@ const generateMemberQR = (req, res) => {
   });
 };
 
+// Real-Time Server-Sent Events (SSE) Bus & Client Tracker
+let sseClients = [];
+
+const subscribeEvents = (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (res.flushHeaders) res.flushHeaders();
+
+  const clientId = Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  const newClient = { id: clientId, res };
+  sseClients.push(newClient);
+
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', clientId })}\n\n`);
+
+  req.on('close', () => {
+    sseClients = sseClients.filter(c => c.id !== clientId);
+  });
+};
+
+const broadcastRealtimeEvent = (eventType, payload) => {
+  const dataString = JSON.stringify({ type: eventType, payload, timestamp: new Date().toISOString() });
+  sseClients.forEach(client => {
+    try {
+      client.res.write(`data: ${dataString}\n\n`);
+    } catch (err) {}
+  });
+};
+
+// GET User Notifications
+const getUserNotifications = (req, res) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const userNotifs = (store.expiryNotifications || []).filter(
+    n => n.userId === user.id || n.membershipId === user.membershipId || n.membershipId === user.id
+  );
+
+  const currentUser = store.users.find(u => u.id === user.id);
+
+  res.json({
+    success: true,
+    count: userNotifs.length,
+    notifications: userNotifs,
+    lastNoticeSent: currentUser ? currentUser.lastNoticeSent : null,
+    lastNoticeDetails: currentUser ? currentUser.lastNoticeDetails : null
+  });
+};
+
 // POST Send Expiry Notice Message to User (SMS & Email Notification Audit)
 const sendExpiryNotice = (req, res) => {
   const { memberId } = req.body;
@@ -971,10 +1018,7 @@ const sendExpiryNotice = (req, res) => {
     message: `Dear ${user.fullName}, your American Fitness Gym ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`
   };
 
-  if (!store.expiryNotifications) {
-    store.expiryNotifications = [];
-  }
-  store.expiryNotifications.unshift({
+  const notificationObj = {
     id: 'notif_' + Date.now(),
     userId: user.id,
     memberName: user.fullName,
@@ -983,6 +1027,19 @@ const sendExpiryNotice = (req, res) => {
     sentFormatted,
     message: user.lastNoticeDetails.message,
     status: 'DELIVERED ✅'
+  };
+
+  if (!store.expiryNotifications) {
+    store.expiryNotifications = [];
+  }
+  store.expiryNotifications.unshift(notificationObj);
+
+  // Broadcast Real-Time Push Event to connected subscribers (SSE Stream)
+  broadcastRealtimeEvent('EXPIRY_NOTICE_SENT', {
+    ...notificationObj,
+    userEmail: user.email,
+    userPhone: user.phone,
+    lastNoticeDetails: user.lastNoticeDetails
   });
 
   res.json({
@@ -1028,5 +1085,8 @@ module.exports = {
   saveService,
   deleteService,
   saveMembership,
-  deleteMembership
+  deleteMembership,
+  subscribeEvents,
+  getUserNotifications
 };
+

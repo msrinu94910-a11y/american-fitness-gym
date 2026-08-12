@@ -31,7 +31,9 @@ router.get('/admin/analytics', controller.getAdminAnalytics);
 router.get('/admin/members', controller.getAdminMembers);
 router.post('/admin/generate-qr', controller.generateMemberQR);
 router.post('/admin/send-expiry-notice', controller.sendExpiryNotice);
-router.post('/user/renew-subscription', controller.renewSubscription);
+// Real-Time Push Events Stream & Customer Notifications
+router.get('/events', controller.subscribeEvents);
+router.get('/user/notifications', verifyToken, controller.getUserNotifications);
 
 // Public Gym Data Endpoints
 router.get('/memberships', controller.getMemberships);

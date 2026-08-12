@@ -215,9 +215,9 @@ export default function RegisterPage({ setActivePage }) {
                 onChange={(e) => setFormData({ ...formData, membershipPlan: e.target.value })}
                 style={{ ...inputStyle, paddingLeft: '1rem', appearance: 'none' }}
               >
-                <option value="Basic Gym Access">Basic Gym Access ($29/mo)</option>
-                <option value="Pro Athlete">Pro Athlete ($59/mo - Most Popular)</option>
-                <option value="VIP Elite">VIP Elite ($99/mo - All Inclusive)</option>
+                <option value="Basic Gym Access">Basic Gym Access (₹29/mo)</option>
+                <option value="Pro Athlete">Pro Athlete (₹59/mo - Most Popular)</option>
+                <option value="VIP Elite">VIP Elite (₹99/mo - All Inclusive)</option>
               </select>
             </div>
 

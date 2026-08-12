@@ -10,7 +10,10 @@ import LoginPage from './LoginPage';
 import MobileScannerPage from './MobileScannerPage';
 
 export default function DashboardPage({ setActivePage }) {
-  const { user, setUser, logoutSession, userBookings, cancelBookingHandler, showToast } = useApp();
+  const { 
+    user, setUser, logoutSession, userBookings, cancelBookingHandler, 
+    showToast, realtimeNoticePopup, closeRealtimeNoticePopup 
+  } = useApp();
   const [activeTab, setActiveTab] = useState('pass'); // 'pass' | 'bookings' | 'profile' | 'metrics'
   const [scanning, setScanning] = useState(false);
   const [turnstileMessage, setTurnstileMessage] = useState(null);
@@ -110,6 +113,104 @@ export default function DashboardPage({ setActivePage }) {
     <div style={{ paddingTop: '2.5rem', paddingBottom: '6rem', minHeight: '85vh' }}>
       <div className="container" style={{ maxWidth: '1000px' }}>
         
+        {/* Real-Time Push Expiry Notice Pop-Up Alert Modal */}
+        {realtimeNoticePopup && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 99999,
+              background: 'rgba(15, 23, 42, 0.88)',
+              backdropFilter: 'blur(12px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem'
+            }}
+            onClick={closeRealtimeNoticePopup}
+          >
+            <div
+              className="glass-card"
+              style={{
+                maxWidth: '520px',
+                width: '100%',
+                background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+                border: '3px solid #0284c7',
+                borderRadius: '24px',
+                padding: '2rem',
+                boxShadow: '0 25px 60px rgba(2, 132, 199, 0.4)',
+                textAlign: 'center',
+                position: 'relative'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', boxShadow: '0 4px 20px rgba(2, 132, 199, 0.6)' }}>
+                <AlertCircle size={36} />
+              </div>
+
+              <div style={{ background: 'rgba(2, 132, 199, 0.25)', border: '1px solid #0284c7', color: '#38bdf8', padding: '0.35rem 0.85rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'inline-block', marginBottom: '0.75rem' }}>
+                ⚡ REAL-TIME EXPIRY NOTICE FROM ADMIN
+              </div>
+
+              <h2 style={{ fontSize: '1.6rem', color: '#ffffff', fontFamily: 'var(--font-heading)', margin: '0 0 0.5rem 0' }}>
+                MEMBERSHIP NOTICE RECEIVED
+              </h2>
+
+              <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '1.25rem' }}>
+                Delivered live to your screen at <strong>{realtimeNoticePopup.sentFormatted || 'Just now'}</strong>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', padding: '1.25rem', borderRadius: '16px', color: '#f1f5f9', fontSize: '0.95rem', lineHeight: 1.5, textAlign: 'left', marginBottom: '1.5rem' }}>
+                {realtimeNoticePopup.message || realtimeNoticePopup.lastNoticeDetails?.message || `Dear ${user.fullName}, your gym membership expired. Please renew your plan to maintain 24/7 facility access.`}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={() => {
+                    closeRealtimeNoticePopup();
+                    handleRenewSubscription();
+                  }}
+                  className="btn btn-gold pulse-button"
+                  style={{
+                    flex: 1,
+                    height: '48px',
+                    fontSize: '0.95rem',
+                    fontWeight: 900,
+                    background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <RefreshCw size={18} /> Renew Subscription (+1 Yr)
+                </button>
+
+                <button
+                  onClick={closeRealtimeNoticePopup}
+                  style={{
+                    padding: '0 1.25rem',
+                    height: '48px',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#cbd5e1',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '14px',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Dismiss ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Automatic Expiry Notice Alert Banner in User Dashboard */}
         {(user.status === 'EXPIRED' || user.status === 'EXPIRED_MEMBER' || user.lastNoticeSent || (user.expiryDate && new Date(user.expiryDate) < new Date())) && (
           <div
@@ -117,10 +218,10 @@ export default function DashboardPage({ setActivePage }) {
             style={{
               padding: '1.5rem 1.75rem',
               marginBottom: '2rem',
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.25) 100%)',
-              border: '2px solid #ef4444',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+              border: '2px solid #0284c7',
               borderRadius: 'var(--radius-lg)',
-              boxShadow: '0 8px 30px rgba(239, 68, 68, 0.25)',
+              boxShadow: '0 8px 30px rgba(2, 132, 199, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -129,19 +230,19 @@ export default function DashboardPage({ setActivePage }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.1rem', flex: 1, minWidth: '280px' }}>
-              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#ef4444', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(239,68,68,0.5)' }}>
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 15px rgba(2, 132, 199, 0.5)' }}>
                 <AlertCircle size={30} />
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fca5a5', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span>⚠️ MEMBERSHIP EXPIRY NOTICE FROM ADMIN</span>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ffffff', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ color: '#ffffff', fontWeight: 900 }}>⚠️ MEMBERSHIP EXPIRY NOTICE FROM ADMIN</span>
                   <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', color: '#ffffff' }}>{user.lastNoticeSent || 'Notice Received'}</span>
                 </div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginTop: '0.3rem', lineHeight: 1.45 }}>
                   {user.lastNoticeDetails?.message || `Dear ${user.fullName || 'Member'}, your ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
-                  📩 Delivered via SMS & Email to <strong>{user.email}</strong> • <strong>{user.phone || '(555) 888-9900'}</strong>
+                <div style={{ fontSize: '0.8rem', color: '#93c5fd', marginTop: '0.4rem' }}>
+                  📩 Delivered via SMS & Email to <strong style={{ color: '#ffffff' }}>{user.email}</strong> • <strong style={{ color: '#ffffff' }}>{user.phone || '(555) 888-9900'}</strong>
                 </div>
               </div>
             </div>
@@ -169,6 +270,63 @@ export default function DashboardPage({ setActivePage }) {
             </button>
           </div>
         )}
+
+        {/* Standalone User Dashboard Portal Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid #e2e8f0'
+        }}>
+          <div 
+            onClick={() => setActivePage && setActivePage('home')}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+          >
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.3)'
+            }}>
+              <Flame size={22} color="#ffffff" />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)', letterSpacing: '0.02em' }}>
+                AMERICAN FITNESS
+              </div>
+              <div style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 800 }}>
+                MEMBER PORTAL DASHBOARD
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActivePage && setActivePage('home')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+            }}
+          >
+            🌐 Back to Gym Website
+          </button>
+        </div>
 
         {/* Top Member Header Banner */}
         <div
@@ -365,68 +523,68 @@ export default function DashboardPage({ setActivePage }) {
                       <XCircle size={22} color="#ef4444" />
                       <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>YOUR SUBSCRIPTION HAS EXPIRED ❌</strong>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', margin: '0.75rem 0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', background: 'rgba(15,23,42,0.6)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', margin: '0.75rem 0', border: '1px solid rgba(255,255,255,0.15)' }}>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', display: 'block' }}>MEMBERSHIP TIER</span>
-                        <strong style={{ color: '#fca5a5' }}>{user.membershipPlan || 'Basic Gym Access'}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MEMBERSHIP TIER</span>
+                        <strong style={{ color: '#fca5a5', fontWeight: 800 }}>{user.membershipPlan || 'Basic Gym Access'}</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', display: 'block' }}>EXPIRY DATE</span>
-                        <strong style={{ color: '#ef4444' }}>{user.expiryDate || '2025-01-15'}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>EXPIRY DATE</span>
+                        <strong style={{ color: '#ef4444', fontWeight: 800 }}>{user.expiryDate || '2025-01-15'}</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#cbd5e1', display: 'block' }}>DAYS REMAINING</span>
-                        <strong style={{ color: '#ef4444' }}>0 Days Remaining</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DAYS REMAINING</span>
+                        <strong style={{ color: '#ef4444', fontWeight: 800 }}>0 Days Remaining</strong>
                       </div>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#cbd5e1' }}>
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: '#ffffff', fontWeight: 600 }}>
                       Your 24/7 keycard turnstile access is currently locked. Renew your subscription below to restore facility access immediately.
                     </p>
                   </div>
                 ) : (
-                  <div style={{ background: 'rgba(16,185,129,0.15)', border: '1.5px solid #10b981', padding: '1.25rem', borderRadius: 'var(--radius-md)', color: '#a7f3d0', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                  <div style={{ background: 'rgba(16,185,129,0.2)', border: '2px solid #10b981', padding: '1.25rem', borderRadius: 'var(--radius-md)', color: '#ffffff', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       <CheckCircle2 size={22} color="#10b981" />
                       <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>ACTIVE MEMBERSHIP SUBSCRIPTION ✅</strong>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', margin: '0.75rem 0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', background: 'rgba(15,23,42,0.6)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', margin: '0.75rem 0', border: '1px solid rgba(255,255,255,0.15)' }}>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>MEMBERSHIP TIER</span>
-                        <strong style={{ color: '#fbbf24' }}>{user.membershipPlan || 'Pro Athlete VIP'}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MEMBERSHIP TIER</span>
+                        <strong style={{ color: '#fbbf24', fontWeight: 900 }}>{user.membershipPlan || 'Pro Athlete VIP'}</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>ACTIVE UNTIL</span>
-                        <strong style={{ color: '#6ee7b7' }}>{user.expiryDate || '2027-12-31'}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ACTIVE UNTIL</span>
+                        <strong style={{ color: '#6ee7b7', fontWeight: 900 }}>{user.expiryDate || '2027-12-31'}</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>REMAINING DAYS</span>
-                        <strong style={{ color: '#34d399' }}>⚡ 508 Days Left</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>REMAINING DAYS</span>
+                        <strong style={{ color: '#34d399', fontWeight: 900 }}>⚡ 508 Days Left</strong>
                       </div>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#cbd5e1' }}>
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: '#ffffff', fontWeight: 600, marginTop: '0.5rem' }}>
                       Show your scannable QR Code on the left to gym staff upon entry or tap below to simulate gate check-in.
                     </p>
                   </div>
                 )}
 
                 {turnstileMessage && (
-                  <div style={{ background: 'rgba(13,148,136,0.15)', border: '1px solid #0D9488', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', color: '#2dd4bf', fontWeight: 600, fontSize: '0.88rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <CheckCircle2 size={18} /> {turnstileMessage}
+                  <div style={{ background: 'rgba(13,148,136,0.2)', border: '1.5px solid #0D9488', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, fontSize: '0.88rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <CheckCircle2 size={18} color="#2dd4bf" /> <span style={{ color: '#ffffff' }}>{turnstileMessage}</span>
                   </div>
                 )}
 
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.88rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Total Facility Check-Ins:</span>
-                    <strong style={{ color: '#ffffff' }}>{user.totalCheckIns || 1} Visits</strong>
+                <div style={{ background: 'rgba(15,23,42,0.6)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.15)', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.65rem', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#ffffff', fontWeight: 700 }}>Total Facility Check-Ins:</span>
+                    <strong style={{ color: '#ffffff', fontWeight: 900 }}>{user.totalCheckIns || 1} Visits</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.88rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Workout Streak:</span>
-                    <strong style={{ color: '#fbbf24' }}>🔥 {user.workoutStreakDays || 1} Days Active</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.65rem', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#ffffff', fontWeight: 700 }}>Workout Streak:</span>
+                    <strong style={{ color: '#fbbf24', fontWeight: 900 }}>🔥 {user.workoutStreakDays || 1} Days Active</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Member Rewards:</span>
-                    <strong style={{ color: '#38bdf8' }}>⚡ {user.rewardPoints || 100} Points</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#ffffff', fontWeight: 700 }}>Member Rewards:</span>
+                    <strong style={{ color: '#38bdf8', fontWeight: 900 }}>⚡ {user.rewardPoints || 100} Points</strong>
                   </div>
                 </div>
 
@@ -672,9 +830,9 @@ export default function DashboardPage({ setActivePage }) {
                   onChange={(e) => setProfileForm({ ...profileForm, membershipPlan: e.target.value })}
                   style={{ ...inputStyle, appearance: 'none' }}
                 >
-                  <option value="Basic Gym Access">Basic Gym Access ($29/mo)</option>
-                  <option value="Pro Athlete">Pro Athlete ($59/mo - Recommended)</option>
-                  <option value="VIP Elite">VIP Elite ($99/mo - All Inclusive)</option>
+                  <option value="Basic Gym Access">Basic Gym Access (₹29/mo)</option>
+                  <option value="Pro Athlete">Pro Athlete (₹59/mo - Recommended)</option>
+                  <option value="VIP Elite">VIP Elite (₹99/mo - All Inclusive)</option>
                 </select>
               </div>
 

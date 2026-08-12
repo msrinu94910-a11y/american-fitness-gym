@@ -671,10 +671,116 @@ html {
 /* ==========================================================================
    Admin Dashboard Light Theme / White Background Styling
    ========================================================================== */
+/* ==========================================================================
+   Admin Mobile Responsive System
+   ========================================================================== */
+.admin-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: var(--font-body);
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
 .admin-sidebar {
+  width: 260px;
+  min-width: 260px;
   background: #ffffff !important;
   border-right: 1px solid #e2e8f0 !important;
   box-shadow: 4px 0 25px rgba(0, 0, 0, 0.03) !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem 1rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  min-width: 0;
+  background: #f8fafc;
+  width: 100%;
+}
+
+.admin-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 899px) {
+  .admin-container {
+    flex-direction: column !important;
+  }
+
+  .admin-sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    position: relative !important;
+    top: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 0.75rem 0.85rem !important;
+  }
+
+  .admin-sidebar-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .admin-sidebar-brand {
+    margin-bottom: 0 !important;
+  }
+
+  .admin-nav-label {
+    display: none !important;
+  }
+
+  .admin-nav-list {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding-bottom: 0.35rem !important;
+    gap: 0.4rem !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .admin-nav-button {
+    width: auto !important;
+    white-space: nowrap !important;
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.8rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .admin-sidebar-footer {
+    display: none !important;
+  }
+
+  .admin-main {
+    padding: 0.85rem 0.65rem !important;
+  }
+
+  .admin-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 0.65rem !important;
+  }
 }
 
 .glass-card {
@@ -688,7 +794,7 @@ html {
   color: #0f172a !important;
 }
 
-.glass-card p, .glass-card span, .glass-card label {
+.glass-card p, .glass-card label {
   color: #334155;
 }
 
