@@ -184,13 +184,13 @@
     },
     {
       "id": "mem_1786523589158",
-      "name": "MOST POPULAR  Pro athlete",
-      "tier": "custom",
+      "name": "Pro Athlete",
+      "tier": "pro",
       "monthlyPrice": 1099,
       "annualPrice": 999,
-      "badge": "SPECIAL",
-      "popular": false,
-      "description": "The complete athletic package including unlimited facility zones and recovery spa.\n",
+      "badge": "PRO ATHLETE",
+      "popular": true,
+      "description": "The complete athletic package including unlimited facility zones and recovery spa.",
       "ctaText": "Join Plan",
       "featuresText": "24/7 Access to Main Weight Floor\nLocker Room Access",
       "features": [

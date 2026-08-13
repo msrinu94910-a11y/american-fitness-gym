@@ -2,11 +2,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const connectDB = require('./config/db');
 const apiRoutes = require('./routes/api');
 const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to Database
+connectDB();
 
 // CORS & Body Parsing Middleware - Allow all origins (Local, Vercel, Staging)
 app.use(cors({
@@ -51,3 +55,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(` 🌐 Health Endpoint: http://localhost:${PORT}/api/health`);
   console.log(`==================================================`);
 });
+

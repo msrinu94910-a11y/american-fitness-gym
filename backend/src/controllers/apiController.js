@@ -1,4 +1,15 @@
+const mongoose = require('mongoose');
+const User = require('../models/User');
+const Membership = require('../models/Membership');
+const Facility = require('../models/Facility');
+const BlogPost = require('../models/BlogPost');
+const Booking = require('../models/Booking');
+const Attendance = require('../models/Attendance');
+const Lead = require('../models/Lead');
+const CMSContent = require('../models/CMSContent');
+const Notification = require('../models/Notification');
 const store = require('../data/store');
+const cmsDefaultData = require('../data/cms.json');
 
 // Health Check
 const getHealth = (req, res) => {
@@ -6,100 +17,48 @@ const getHealth = (req, res) => {
     status: 'online',
     timestamp: new Date().toISOString(),
     app: 'American Fitness Gym API',
-    version: '2.0.0'
+    version: '2.0.0',
+    database: 'MongoDB Connected'
   });
 };
 
 // Auth: Register New Member or Admin
-const registerUser = (req, res) => {
-  const { fullName, email, password, phone, membershipPlan } = req.body;
+const registerUser = async (req, res) => {
+  try {
+    const { fullName, email, password, phone, membershipPlan } = req.body;
 
-  if (!fullName || !email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: 'Full name, email address, and password are required.'
-    });
-  }
+    if (!fullName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full name, email address, and password are required.'
+      });
+    }
 
-  const cleanEmail = email.toLowerCase().trim();
-  const existingUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
-  if (existingUser) {
-    return res.status(400).json({
-      success: false,
-      message: 'An account with this email address already exists.'
-    });
-  }
+    const cleanEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: cleanEmail });
 
-  const newId = 'usr_' + Date.now();
-  const memNum = Math.floor(100000 + Math.random() * 900000);
-  const code = `AFG-${memNum}`;
-  const assignedRole = req.body.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email address already exists.'
+      });
+    }
 
-  const newUser = {
-    id: newId,
-    fullName,
-    email: cleanEmail,
-    password,
-    phone: phone || '(555) 000-0000',
-    membershipPlan: membershipPlan || (assignedRole === 'admin' ? 'Staff Admin' : 'Pro Athlete VIP'),
-    membershipId: code,
-    qrCode: code,
-    role: assignedRole,
-    status: 'ACTIVE_MEMBER',
-    joinedDate: new Date().toISOString().split('T')[0],
-    expiryDate: '2027-12-31',
-    emergencyContact: 'Not provided',
-    fitnessGoal: 'General Health & Fitness',
-    totalCheckIns: 1,
-    rewardPoints: 100,
-    workoutStreakDays: 1
-  };
-
-  store.users.push(newUser);
-
-  const { password: _, ...userWithoutPassword } = newUser;
-  const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
-
-  res.status(201).json({
-    success: true,
-    message: `Account created successfully as ${assignedRole === 'admin' ? 'Admin Officer' : 'User Member'}!`,
-    token,
-    user: userWithoutPassword
-  });
-};
-
-// Auth: Login User
-const loginUser = (req, res) => {
-  const { email, password, role } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: 'Email address and password are required.'
-    });
-  }
-
-  const cleanEmail = email.toLowerCase().trim();
-  let user = store.users.find(u => u.email.toLowerCase() === cleanEmail);
-
-  if (!user) {
-    // Automatically provision a new user/admin account if not pre-seeded
-    const isAdmin = cleanEmail.includes('admin') || role === 'admin';
-    const namePart = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ');
-    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const newId = 'usr_' + Date.now();
     const memNum = Math.floor(100000 + Math.random() * 900000);
     const code = `AFG-${memNum}`;
+    const assignedRole = req.body.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
 
-    user = {
-      id: 'usr_' + Date.now(),
-      fullName: formattedName || 'Gym Member',
+    const newUser = await User.create({
+      id: newId,
+      fullName,
       email: cleanEmail,
-      password: password,
-      phone: '(555) 000-0000',
-      membershipPlan: isAdmin ? 'Staff Admin' : 'Pro Athlete VIP',
+      password,
+      phone: phone || '(555) 000-0000',
+      membershipPlan: membershipPlan || (assignedRole === 'admin' ? 'Staff Admin' : 'Pro Athlete VIP'),
       membershipId: code,
       qrCode: code,
-      role: isAdmin ? 'admin' : 'user',
+      role: assignedRole,
       status: 'ACTIVE_MEMBER',
       joinedDate: new Date().toISOString().split('T')[0],
       expiryDate: '2027-12-31',
@@ -108,30 +67,99 @@ const loginUser = (req, res) => {
       totalCheckIns: 1,
       rewardPoints: 100,
       workoutStreakDays: 1
-    };
-    store.users.push(user);
-  } else {
-    // Ensure password matches or allow update
-    user.password = password;
-    if (!user.membershipId) {
-      const memNum = Math.floor(100000 + Math.random() * 900000);
-      user.membershipId = user.qrCode || `AFG-${memNum}`;
-      user.qrCode = user.membershipId;
-    }
+    });
+
+    const userObj = newUser.toObject();
+    delete userObj.password;
+
+    const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
+
+    res.status(201).json({
+      success: true,
+      message: `Account created successfully as ${assignedRole === 'admin' ? 'Admin Officer' : 'User Member'}!`,
+      token,
+      user: userObj
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
+};
 
-  const { password: _, ...userWithoutPassword } = user;
-  const effectiveRole = role === 'admin' || user.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
-  userWithoutPassword.role = effectiveRole;
+// Auth: Login User
+const loginUser = async (req, res) => {
+  try {
+    const { email, password, role } = req.body;
 
-  const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address and password are required.'
+      });
+    }
 
-  res.json({
-    success: true,
-    message: `Welcome back, ${user.fullName} (${effectiveRole === 'admin' ? 'Admin Officer' : 'User Member'})!`,
-    token,
-    user: userWithoutPassword
-  });
+    const cleanEmail = email.toLowerCase().trim();
+    const namePart = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim();
+
+    let user = await User.findOne({
+      $or: [
+        { email: cleanEmail },
+        ...(namePart.length > 2 ? [{ fullName: new RegExp(`^${namePart}$`, 'i') }] : [])
+      ]
+    });
+
+    if (!user) {
+      // Auto provision account in MongoDB
+      const isAdmin = cleanEmail.includes('admin') || role === 'admin';
+      const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      const memNum = Math.floor(100000 + Math.random() * 900000);
+      const code = `AFG-${memNum}`;
+
+      user = await User.create({
+        id: 'usr_' + Date.now(),
+        fullName: formattedName || 'Gym Member',
+        email: cleanEmail,
+        password: password,
+        phone: '(555) 000-0000',
+        membershipPlan: isAdmin ? 'Staff Admin' : 'Pro Athlete VIP',
+        membershipId: code,
+        qrCode: code,
+        role: isAdmin ? 'admin' : 'user',
+        status: 'ACTIVE_MEMBER',
+        joinedDate: new Date().toISOString().split('T')[0],
+        expiryDate: '2027-12-31',
+        emergencyContact: 'Not provided',
+        fitnessGoal: 'General Health & Fitness',
+        totalCheckIns: 1,
+        rewardPoints: 100,
+        workoutStreakDays: 1
+      });
+    } else {
+      user.password = password;
+      if (!user.membershipId) {
+        const memNum = Math.floor(100000 + Math.random() * 900000);
+        user.membershipId = user.qrCode || `AFG-${memNum}`;
+        user.qrCode = user.membershipId;
+      }
+      await user.save();
+    }
+
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    const effectiveRole = role === 'admin' || user.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
+    userObj.role = effectiveRole;
+
+    const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
+
+    res.json({
+      success: true,
+      message: `Welcome back, ${user.fullName} (${effectiveRole === 'admin' ? 'Admin Officer' : 'User Member'})!`,
+      token,
+      user: userObj
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // Protected: Get Logged In User Profile
@@ -144,27 +172,34 @@ const getCurrentUser = (req, res) => {
 };
 
 // Protected: Update User Profile
-const updateProfile = (req, res) => {
-  const { fullName, phone, emergencyContact, fitnessGoal, membershipPlan } = req.body;
-  const targetUser = store.users.find(u => u.id === req.user.id);
+const updateProfile = async (req, res) => {
+  try {
+    const { fullName, phone, emergencyContact, fitnessGoal, membershipPlan } = req.body;
+    const targetUser = await User.findOne({ email: req.user.email });
 
-  if (!targetUser) {
-    return res.status(404).json({ success: false, message: 'User profile not found.' });
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User profile not found.' });
+    }
+
+    if (fullName) targetUser.fullName = fullName;
+    if (phone) targetUser.phone = phone;
+    if (emergencyContact) targetUser.emergencyContact = emergencyContact;
+    if (fitnessGoal) targetUser.fitnessGoal = fitnessGoal;
+    if (membershipPlan) targetUser.membershipPlan = membershipPlan;
+
+    await targetUser.save();
+
+    const userObj = targetUser.toObject();
+    delete userObj.password;
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully!',
+      user: userObj
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  if (fullName) targetUser.fullName = fullName;
-  if (phone) targetUser.phone = phone;
-  if (emergencyContact) targetUser.emergencyContact = emergencyContact;
-  if (fitnessGoal) targetUser.fitnessGoal = fitnessGoal;
-  if (membershipPlan) targetUser.membershipPlan = membershipPlan;
-
-  const { password: _, ...userWithoutPassword } = targetUser;
-
-  res.json({
-    success: true,
-    message: 'Profile updated successfully!',
-    user: userWithoutPassword
-  });
 };
 
 // GET Classes Schedule
@@ -197,620 +232,822 @@ const getClasses = (req, res) => {
 };
 
 // Protected: Book a Class Seat
-const bookClass = (req, res) => {
-  const { classId, preferredDate } = req.body;
-  const user = req.user;
+const bookClass = async (req, res) => {
+  try {
+    const { classId, preferredDate } = req.body;
+    const user = req.user;
 
-  if (!classId) {
-    return res.status(400).json({ success: false, message: 'Class ID is required.' });
-  }
+    if (!classId) {
+      return res.status(400).json({ success: false, message: 'Class ID is required.' });
+    }
 
-  const targetClass = store.classes.find(c => c.id === classId);
-  if (!targetClass) {
-    return res.status(404).json({ success: false, message: 'Class not found.' });
-  }
+    const targetClass = store.classes.find(c => c.id === classId);
+    if (!targetClass) {
+      return res.status(404).json({ success: false, message: 'Class not found.' });
+    }
 
-  if (targetClass.spotsLeft <= 0) {
-    return res.status(400).json({ success: false, message: 'Sorry, this class is fully booked.' });
-  }
+    if (targetClass.spotsLeft <= 0) {
+      return res.status(400).json({ success: false, message: 'Sorry, this class is fully booked.' });
+    }
 
-  // Check if user already booked this class for the same date/timeslot
-  const dateToBook = preferredDate || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];
-  const existingBooking = store.classBookings.find(
-    b => b.userId === user.id && b.classId === classId && b.date === dateToBook && b.status === 'CONFIRMED'
-  );
+    const dateToBook = preferredDate || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];
 
-  if (existingBooking) {
-    return res.status(400).json({
-      success: false,
-      message: 'You have already reserved a seat in this class session!'
+    const existingBooking = await Booking.findOne({
+      userEmail: user.email.toLowerCase(),
+      classId,
+      date: dateToBook,
+      status: 'CONFIRMED'
     });
+
+    if (existingBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already reserved a seat in this class session!'
+      });
+    }
+
+    targetClass.spotsLeft = Math.max(0, targetClass.spotsLeft - 1);
+
+    const newBooking = await Booking.create({
+      id: 'bk_' + Date.now(),
+      userEmail: user.email.toLowerCase(),
+      classId: targetClass.id,
+      className: targetClass.title,
+      instructor: targetClass.trainer,
+      date: dateToBook,
+      time: targetClass.timeSlot,
+      category: targetClass.category || 'Fitness Class',
+      status: 'CONFIRMED',
+      qrToken: `QR_CLASS_${targetClass.id}_${Date.now()}`
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Seat successfully reserved for ${targetClass.title}!`,
+      booking: newBooking
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  // Decrement spot
-  targetClass.spotsLeft = Math.max(0, targetClass.spotsLeft - 1);
-
-  const newBooking = {
-    id: 'bk_' + Date.now(),
-    userId: user.id,
-    userEmail: user.email,
-    classId: targetClass.id,
-    className: targetClass.title,
-    trainer: targetClass.trainer,
-    timeSlot: targetClass.timeSlot,
-    date: dateToBook,
-    day: targetClass.scheduleDays[0] || 'Scheduled Day',
-    room: targetClass.room,
-    status: 'CONFIRMED',
-    bookedAt: new Date().toISOString()
-  };
-
-  store.classBookings.unshift(newBooking);
-
-  res.status(201).json({
-    success: true,
-    message: `Seat successfully reserved for ${targetClass.title}!`,
-    booking: newBooking
-  });
 };
 
 // Protected: Get User's Class Bookings History
-const getUserBookings = (req, res) => {
-  const user = req.user;
-  const bookings = store.classBookings.filter(b => b.userId === user.id);
+const getUserBookings = async (req, res) => {
+  try {
+    const user = req.user;
+    const bookings = await Booking.find({ userEmail: user.email.toLowerCase() }).sort({ createdAt: -1 });
 
-  res.json({
-    success: true,
-    count: bookings.length,
-    bookings
-  });
+    res.json({
+      success: true,
+      count: bookings.length,
+      bookings
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // Protected: Cancel a Class Booking
-const cancelBooking = (req, res) => {
-  const { bookingId } = req.params;
-  const user = req.user;
+const cancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const user = req.user;
 
-  const bookingIndex = store.classBookings.findIndex(b => b.id === bookingId && b.userId === user.id);
+    const booking = await Booking.findOne({
+      $or: [{ id: bookingId }, { _id: bookingId }],
+      userEmail: user.email.toLowerCase()
+    });
 
-  if (bookingIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Booking not found or not owned by user.' });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found or not owned by user.' });
+    }
+
+    if (booking.status === 'CANCELLED') {
+      return res.status(400).json({ success: false, message: 'Booking is already cancelled.' });
+    }
+
+    booking.status = 'CANCELLED';
+    await booking.save();
+
+    const targetClass = store.classes.find(c => c.id === booking.classId);
+    if (targetClass) {
+      targetClass.spotsLeft = Math.min(targetClass.capacity, targetClass.spotsLeft + 1);
+    }
+
+    res.json({
+      success: true,
+      message: `Reservation for ${booking.className} cancelled successfully.`,
+      booking
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  const booking = store.classBookings[bookingIndex];
-
-  if (booking.status === 'CANCELLED') {
-    return res.status(400).json({ success: false, message: 'Booking is already cancelled.' });
-  }
-
-  // Mark as cancelled
-  booking.status = 'CANCELLED';
-
-  // Restore class spot
-  const targetClass = store.classes.find(c => c.id === booking.classId);
-  if (targetClass) {
-    targetClass.spotsLeft = Math.min(targetClass.capacity, targetClass.spotsLeft + 1);
-  }
-
-  res.json({
-    success: true,
-    message: `Reservation for ${booking.className} cancelled successfully.`,
-    booking
-  });
 };
 
 // Protected: Get Digital Pass Info & Tap Turnstile Simulation
-const getDigitalPass = (req, res) => {
-  const user = req.user;
-  const targetUser = store.users.find(u => u.id === user.id);
+const getDigitalPass = async (req, res) => {
+  try {
+    const user = req.user;
+    const targetUser = await User.findOne({ email: user.email.toLowerCase() });
 
-  if (req.method === 'POST') {
-    // Turnstile Scan simulator
-    if (targetUser) {
-      targetUser.totalCheckIns = (targetUser.totalCheckIns || 0) + 1;
-      targetUser.workoutStreakDays = (targetUser.workoutStreakDays || 0) + 1;
-      targetUser.rewardPoints = (targetUser.rewardPoints || 0) + 25;
+    if (req.method === 'POST') {
+      if (targetUser) {
+        targetUser.totalCheckIns = (targetUser.totalCheckIns || 0) + 1;
+        targetUser.workoutStreakDays = (targetUser.workoutStreakDays || 0) + 1;
+        targetUser.rewardPoints = (targetUser.rewardPoints || 0) + 25;
+        await targetUser.save();
+      }
+
+      await Attendance.create({
+        id: 'att_' + Date.now(),
+        memberName: targetUser ? targetUser.fullName : user.fullName,
+        email: user.email.toLowerCase(),
+        checkInTime: new Date().toISOString(),
+        zone: 'Downtown Flagship - Main Gate A',
+        method: 'Digital Mobile QR',
+        status: 'GRANTED_ENTRY'
+      });
+
+      return res.json({
+        success: true,
+        message: 'Turnstile Unlocked! Welcome to American Fitness Gym.',
+        scanTimestamp: new Date().toLocaleTimeString(),
+        gate: 'Downtown Flagship - Main Gate A',
+        stats: {
+          totalCheckIns: targetUser?.totalCheckIns || 1,
+          workoutStreakDays: targetUser?.workoutStreakDays || 1,
+          rewardPoints: targetUser?.rewardPoints || 100
+        }
+      });
     }
 
-    return res.json({
+    res.json({
       success: true,
-      message: 'Turnstile Unlocked! Welcome to American Fitness Gym.',
-      scanTimestamp: new Date().toLocaleTimeString(),
-      gate: 'Downtown Flagship - Main Gate A',
-      stats: {
-        totalCheckIns: targetUser?.totalCheckIns || 1,
-        workoutStreakDays: targetUser?.workoutStreakDays || 1,
-        rewardPoints: targetUser?.rewardPoints || 100
+      pass: {
+        memberName: user.fullName,
+        memberId: (user.id || 'usr_demo').toUpperCase(),
+        qrCode: user.qrCode || `AFG-QR-${user.id}`,
+        membershipPlan: user.membershipPlan,
+        status: user.status,
+        accessLevel: '24/7 VIP Multi-Zone Access',
+        validUntil: user.expiryDate || '2027-12-31'
       }
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  res.json({
-    success: true,
-    pass: {
-      memberName: user.fullName,
-      memberId: user.id.toUpperCase(),
-      qrCode: user.qrCode || `AFG-QR-${user.id}`,
-      membershipPlan: user.membershipPlan,
-      status: user.status,
-      accessLevel: '24/7 VIP Multi-Zone Access',
-      validUntil: '2027-12-31'
-    }
-  });
 };
 
 // GET Memberships
-const getMemberships = (req, res) => {
-  const cms = store.getCmsData();
-  res.json({
-    success: true,
-    data: cms.memberships && cms.memberships.length ? cms.memberships : store.membershipPlans
-  });
+const getMemberships = async (req, res) => {
+  try {
+    const dbMemberships = await Membership.find().lean();
+    if (dbMemberships && dbMemberships.length > 0) {
+      return res.json({ success: true, data: dbMemberships });
+    }
+
+    const cmsRecord = await CMSContent.findOne({ key: 'main' }).lean();
+    const cmsData = cmsRecord ? cmsRecord.data : cmsDefaultData;
+    const result = cmsData.memberships && cmsData.memberships.length ? cmsData.memberships : store.membershipPlans;
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.json({ success: true, data: store.membershipPlans });
+  }
 };
 
 // CMS: Get Full Dynamic Content
-const getCmsContent = (req, res) => {
-  const cms = store.getCmsData();
-  res.json({
-    success: true,
-    data: cms
-  });
+const getCmsContent = async (req, res) => {
+  try {
+    let cmsRecord = await CMSContent.findOne({ key: 'main' }).lean();
+    if (!cmsRecord) {
+      await CMSContent.create({ key: 'main', data: cmsDefaultData });
+      cmsRecord = { data: cmsDefaultData };
+    }
+    res.json({ success: true, data: cmsRecord.data });
+  } catch (err) {
+    res.json({ success: true, data: cmsDefaultData });
+  }
 };
 
 // CMS: Update Homepage Hero & Highlights
-const updateHomepageContent = (req, res) => {
-  const cms = store.getCmsData();
-  cms.homepage = {
-    ...cms.homepage,
-    ...req.body
-  };
-  store.saveCmsData(cms);
-  res.json({
-    success: true,
-    message: 'Homepage content updated successfully!',
-    homepage: cms.homepage
-  });
+const updateHomepageContent = async (req, res) => {
+  try {
+    let cmsRecord = await CMSContent.findOne({ key: 'main' });
+    if (!cmsRecord) {
+      cmsRecord = new CMSContent({ key: 'main', data: cmsDefaultData });
+    }
+
+    cmsRecord.data = {
+      ...cmsRecord.data,
+      homepage: {
+        ...cmsRecord.data.homepage,
+        ...req.body
+      }
+    };
+    cmsRecord.markModified('data');
+    await cmsRecord.save();
+
+    res.json({
+      success: true,
+      message: 'Homepage content updated successfully in MongoDB!',
+      homepage: cmsRecord.data.homepage
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // CMS: Services CRUD
-const saveService = (req, res) => {
-  const cms = store.getCmsData();
-  const service = req.body;
-  if (!service.id) {
-    service.id = 'srv_' + Date.now();
+const saveService = async (req, res) => {
+  try {
+    let cmsRecord = await CMSContent.findOne({ key: 'main' });
+    if (!cmsRecord) {
+      cmsRecord = new CMSContent({ key: 'main', data: cmsDefaultData });
+    }
+
+    const service = req.body;
+    if (!service.id) service.id = 'srv_' + Date.now();
+
+    const services = cmsRecord.data.services || [];
+    const index = services.findIndex(s => s.id === service.id);
+
+    if (index >= 0) {
+      services[index] = { ...services[index], ...service };
+    } else {
+      services.push(service);
+    }
+
+    cmsRecord.data.services = services;
+    cmsRecord.markModified('data');
+    await cmsRecord.save();
+
+    res.json({
+      success: true,
+      message: 'Service saved successfully in MongoDB!',
+      services: cmsRecord.data.services
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  const index = cms.services.findIndex(s => s.id === service.id);
-  if (index >= 0) {
-    cms.services[index] = { ...cms.services[index], ...service };
-  } else {
-    cms.services.push(service);
-  }
-  store.saveCmsData(cms);
-  res.json({
-    success: true,
-    message: 'Service saved successfully!',
-    services: cms.services
-  });
 };
 
-const deleteService = (req, res) => {
-  const { id } = req.params;
-  const cms = store.getCmsData();
-  cms.services = cms.services.filter(s => s.id !== id);
-  store.saveCmsData(cms);
-  res.json({
-    success: true,
-    message: 'Service deleted successfully!',
-    services: cms.services
-  });
+const deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let cmsRecord = await CMSContent.findOne({ key: 'main' });
+    if (!cmsRecord) {
+      return res.status(404).json({ success: false, message: 'CMS data not found.' });
+    }
+
+    cmsRecord.data.services = (cmsRecord.data.services || []).filter(s => s.id !== id);
+    cmsRecord.markModified('data');
+    await cmsRecord.save();
+
+    res.json({
+      success: true,
+      message: 'Service deleted successfully from MongoDB!',
+      services: cmsRecord.data.services
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // CMS: Memberships CRUD
-const saveMembership = (req, res) => {
-  const cms = store.getCmsData();
-  const membership = req.body;
-  if (!membership.id) {
-    membership.id = 'mem_' + Date.now();
+const saveMembership = async (req, res) => {
+  try {
+    let cmsRecord = await CMSContent.findOne({ key: 'main' });
+    if (!cmsRecord) {
+      cmsRecord = new CMSContent({ key: 'main', data: cmsDefaultData });
+    }
+
+    const membership = req.body;
+    if (!membership.id) membership.id = 'mem_' + Date.now();
+
+    const memberships = cmsRecord.data.memberships || [];
+    const index = memberships.findIndex(m => m.id === membership.id);
+
+    if (index >= 0) {
+      memberships[index] = { ...memberships[index], ...membership };
+    } else {
+      memberships.push(membership);
+    }
+
+    cmsRecord.data.memberships = memberships;
+    cmsRecord.markModified('data');
+    await cmsRecord.save();
+
+    // Also update Membership model table
+    await Membership.findOneAndUpdate(
+      { id: membership.id },
+      membership,
+      { upsert: true, new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Membership plan saved successfully in MongoDB!',
+      memberships: cmsRecord.data.memberships
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  const index = cms.memberships.findIndex(m => m.id === membership.id);
-  if (index >= 0) {
-    cms.memberships[index] = { ...cms.memberships[index], ...membership };
-  } else {
-    cms.memberships.push(membership);
-  }
-  store.saveCmsData(cms);
-  res.json({
-    success: true,
-    message: 'Membership plan saved successfully!',
-    memberships: cms.memberships
-  });
 };
 
-const deleteMembership = (req, res) => {
-  const { id } = req.params;
-  const cms = store.getCmsData();
-  cms.memberships = cms.memberships.filter(m => m.id !== id);
-  store.saveCmsData(cms);
-  res.json({
-    success: true,
-    message: 'Membership plan deleted successfully!',
-    memberships: cms.memberships
-  });
+const deleteMembership = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let cmsRecord = await CMSContent.findOne({ key: 'main' });
+    if (cmsRecord) {
+      cmsRecord.data.memberships = (cmsRecord.data.memberships || []).filter(m => m.id !== id);
+      cmsRecord.markModified('data');
+      await cmsRecord.save();
+    }
+
+    await Membership.deleteOne({ id });
+
+    res.json({
+      success: true,
+      message: 'Membership plan deleted successfully from MongoDB!',
+      memberships: cmsRecord ? cmsRecord.data.memberships : []
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // GET Facilities
-const getFacilities = (req, res) => {
-  const { category } = req.query;
-  let result = [...store.facilities];
+const getFacilities = async (req, res) => {
+  try {
+    const { category } = req.query;
+    let filter = {};
+    if (category && category !== 'All') {
+      filter.category = new RegExp(`^${category}$`, 'i');
+    }
 
-  if (category && category !== 'All') {
-    result = result.filter(f => f.category.toLowerCase() === category.toLowerCase());
+    let facilities = await Facility.find(filter).lean();
+    if (!facilities || facilities.length === 0) {
+      facilities = store.facilities;
+    }
+
+    res.json({
+      success: true,
+      count: facilities.length,
+      data: facilities
+    });
+  } catch (err) {
+    res.json({ success: true, count: store.facilities.length, data: store.facilities });
   }
-
-  res.json({
-    success: true,
-    count: result.length,
-    data: result
-  });
 };
 
 // GET Blog Posts
-const getBlogPosts = (req, res) => {
-  const { category, search } = req.query;
-  let result = [...store.blogPosts];
+const getBlogPosts = async (req, res) => {
+  try {
+    const { category, search } = req.query;
+    let filter = {};
 
-  if (category && category !== 'All') {
-    result = result.filter(b => b.category.toLowerCase() === category.toLowerCase());
+    if (category && category !== 'All') {
+      filter.category = new RegExp(`^${category}$`, 'i');
+    }
+
+    if (search) {
+      filter.$or = [
+        { title: new RegExp(search, 'i') },
+        { summary: new RegExp(search, 'i') }
+      ];
+    }
+
+    let posts = await BlogPost.find(filter).lean();
+    if (!posts || posts.length === 0) {
+      posts = store.blogPosts;
+    }
+
+    res.json({
+      success: true,
+      count: posts.length,
+      data: posts
+    });
+  } catch (err) {
+    res.json({ success: true, count: store.blogPosts.length, data: store.blogPosts });
   }
-
-  if (search) {
-    const q = search.toLowerCase();
-    result = result.filter(b => b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q));
-  }
-
-  res.json({
-    success: true,
-    count: result.length,
-    data: result
-  });
 };
 
 // POST Contact Lead Submission
-const submitContact = (req, res) => {
-  const { fullName, email, phone, subject, message } = req.body;
+const submitContact = async (req, res) => {
+  try {
+    const { fullName, email, phone, subject, message } = req.body;
 
-  if (!fullName || !email || !message) {
-    return res.status(400).json({
-      success: false,
-      message: 'Full name, email address, and message are required.'
+    if (!fullName || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full name, email address, and message are required.'
+      });
+    }
+
+    const newLead = await Lead.create({
+      type: 'contact',
+      fullName,
+      email: email.toLowerCase(),
+      phone: phone || 'N/A',
+      interest: subject || 'General Inquiry',
+      message
     });
+
+    res.status(201).json({
+      success: true,
+      message: 'Thank you for reaching out! A representative from American Fitness Gym will contact you within 24 hours.',
+      leadId: newLead._id
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  const newLead = {
-    id: 'lead_' + Date.now(),
-    fullName,
-    email,
-    phone: phone || 'N/A',
-    subject: subject || 'General Inquiry',
-    message,
-    submittedAt: new Date().toISOString()
-  };
-
-  store.contactLeads.push(newLead);
-
-  res.status(201).json({
-    success: true,
-    message: 'Thank you for reaching out! A representative from American Fitness Gym will contact you within 24 hours.',
-    leadId: newLead.id
-  });
 };
 
 // POST Free 1-Day Pass Request
-const submitTrialPass = (req, res) => {
-  const { fullName, email, phone, preferredBranch, preferredDate } = req.body;
+const submitTrialPass = async (req, res) => {
+  try {
+    const { fullName, email, phone, preferredBranch, preferredDate } = req.body;
 
-  if (!fullName || !email || !phone) {
-    return res.status(400).json({
-      success: false,
-      message: 'Full name, email, and phone number are required for your trial pass.'
+    if (!fullName || !email || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full name, email, and phone number are required for your trial pass.'
+      });
+    }
+
+    const passCode = 'AFG-PASS-' + Math.floor(100000 + Math.random() * 900000);
+
+    const trialLead = await Lead.create({
+      type: 'trial_pass',
+      fullName,
+      email: email.toLowerCase(),
+      phone,
+      interest: preferredBranch || 'Downtown Flagship',
+      message: `Trial Date: ${preferredDate || new Date().toISOString().split('T')[0]} | PassCode: ${passCode}`
     });
-  }
 
-  const passCode = 'AFG-PASS-' + Math.floor(100000 + Math.random() * 900000);
-  const trialRequest = {
-    id: 'trial_' + Date.now(),
-    fullName,
-    email,
-    phone,
-    preferredBranch: preferredBranch || 'Downtown Flagship',
-    preferredDate: preferredDate || new Date().toISOString().split('T')[0],
-    passCode,
-    status: 'ACTIVE',
-    issuedAt: new Date().toISOString()
-  };
-
-  store.trialPassRequests.push(trialRequest);
-
-  res.status(201).json({
-    success: true,
-    message: 'Your 1-Day Free Trial Pass has been generated!',
-    pass: trialRequest
-  });
-};
-// Admin: Verify Member QR Code or Membership ID
-// Admin: Verify Member QR Code or Membership ID
-const verifyQR = (req, res) => {
-  const payload = req.body || {};
-  let rawCode = (payload.qrCode || payload.membershipId || payload.code || '').toString().trim();
-
-  if (!rawCode) {
-    return res.status(400).json({
-      success: false,
-      status: 'INVALID',
-      hasSubscription: false,
-      message: 'Please enter a Membership ID, QR Code, or Email to check subscription status.'
-    });
-  }
-
-  // 1. Try parsing JSON if rawCode starts with '{'
-  if (rawCode.startsWith('{') && rawCode.endsWith('}')) {
-    try {
-      const parsed = JSON.parse(rawCode);
-      rawCode = parsed.membershipId || parsed.qrCode || parsed.id || parsed.code || rawCode;
-    } catch (e) {}
-  }
-
-  // 2. Extract query param if rawCode contains URL
-  if (rawCode.includes('?')) {
-    try {
-      const urlObj = new URL(rawCode, 'http://localhost');
-      const param = urlObj.searchParams.get('membershipId') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code');
-      if (param) rawCode = param;
-    } catch (e) {}
-  }
-
-  const code = rawCode.toUpperCase();
-  const cleanCode = code.replace(/[^A-Z0-9]/g, '');
-
-  // 3. Find matching user in store
-  let foundUser = store.users.find(u => {
-    const uQr = (u.qrCode || '').toUpperCase();
-    const uMem = (u.membershipId || '').toUpperCase();
-    const uId = (u.id || '').toUpperCase();
-    const uEmail = (u.email || '').toUpperCase();
-    const uName = (u.fullName || '').toUpperCase();
-
-    return (
-      (uQr && (uQr.includes(code) || code.includes(uQr))) ||
-      (uMem && (uMem.includes(code) || code.includes(uMem))) ||
-      (uId && (uId.includes(code) || code.includes(uId))) ||
-      (uEmail && uEmail.includes(code)) ||
-      (uName && uName.includes(code)) ||
-      (cleanCode.length >= 4 && (
-        (uQr && uQr.replace(/[^A-Z0-9]/g, '').includes(cleanCode)) ||
-        (uMem && uMem.replace(/[^A-Z0-9]/g, '').includes(cleanCode)) ||
-        (uId && uId.replace(/[^A-Z0-9]/g, '').includes(cleanCode))
-      ))
-    );
-  });
-
-  // Check if explicit expired code or user status is expired
-  if (code.includes('EXPIRED') || code === 'AFG-EXPIRED-99' || (foundUser && foundUser.status === 'EXPIRED')) {
-    return res.json({
+    res.status(201).json({
       success: true,
-      hasSubscription: false,
-      status: 'EXPIRED',
-      message: `NO ACTIVE SUBSCRIPTION ❌ Member ${foundUser ? foundUser.fullName : 'Marcus Brody'} has no active subscription.`,
-      member: {
-        id: foundUser ? foundUser.id : 'usr_demo_2',
-        fullName: foundUser ? foundUser.fullName : 'Marcus Brody',
-        email: foundUser ? foundUser.email : 'marcus.brody@example.com',
-        membershipId: foundUser ? (foundUser.membershipId || foundUser.qrCode || foundUser.id) : 'AFG-EXPIRED-99',
-        membershipPlan: foundUser ? (foundUser.membershipPlan || 'Basic Gym Access') : 'Basic Gym Access',
-        expiryDate: foundUser ? (foundUser.expiryDate || '2025-01-15') : '2025-01-15',
-        daysRemaining: 0,
-        status: 'EXPIRED',
-        hasActiveSubscription: false
+      message: 'Your 1-Day Free Trial Pass has been generated!',
+      pass: {
+        id: trialLead._id,
+        fullName,
+        email,
+        phone,
+        preferredBranch: preferredBranch || 'Downtown Flagship',
+        preferredDate: preferredDate || new Date().toISOString().split('T')[0],
+        passCode,
+        status: 'ACTIVE'
       }
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
+};
 
-  // Check if explicit invalid test code
-  if (code.includes('INVALID') || code === 'FAKE-QR-0000') {
-    return res.json({
-      success: false,
-      hasSubscription: false,
-      status: 'INVALID',
-      message: `NO SUBSCRIPTION RECORD FOUND ⚠️ Membership ID / QR Code "${rawCode}" is not registered.`
+// Admin: Verify Member QR Code or Membership ID
+const verifyQR = async (req, res) => {
+  try {
+    const payload = req.body || {};
+    let rawCode = (payload.qrCode || payload.membershipId || payload.code || '').toString().trim();
+
+    if (!rawCode) {
+      return res.status(400).json({
+        success: false,
+        status: 'INVALID',
+        hasSubscription: false,
+        message: 'Please enter a Membership ID, QR Code, or Email to check subscription status.'
+      });
+    }
+
+    if (rawCode.startsWith('{') && rawCode.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(rawCode);
+        rawCode = parsed.membershipId || parsed.qrCode || parsed.id || parsed.code || rawCode;
+      } catch (e) {}
+    }
+
+    if (rawCode.includes('?')) {
+      try {
+        const urlObj = new URL(rawCode, 'http://localhost');
+        const param = urlObj.searchParams.get('membershipId') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code');
+        if (param) rawCode = param;
+      } catch (e) {}
+    }
+
+    const code = rawCode.toUpperCase();
+
+    // Query user in MongoDB
+    let foundUser = await User.findOne({
+      $or: [
+        { qrCode: new RegExp(code, 'i') },
+        { membershipId: new RegExp(code, 'i') },
+        { id: new RegExp(code, 'i') },
+        { email: new RegExp(code, 'i') },
+        { fullName: new RegExp(code, 'i') }
+      ]
     });
-  }
 
-  // If no user pre-seeded, dynamically create a valid member record for the scanned code
-  if (!foundUser) {
-    const memId = code.startsWith('AFG') ? code : `AFG-${cleanCode || Math.floor(100000 + Math.random() * 900000)}`;
-    foundUser = {
-      id: 'usr_' + Date.now(),
-      fullName: 'Jaan (Verified Member)',
-      email: 'member@americanfitness.com',
-      membershipId: memId,
-      qrCode: memId,
-      membershipPlan: 'Pro Athlete VIP',
-      status: 'ACTIVE_MEMBER',
-      joinedDate: '2026-01-01',
-      expiryDate: '2027-12-31'
-    };
-    store.users.push(foundUser);
-  }
+    if (code.includes('EXPIRED') || code === 'AFG-EXPIRED-99' || (foundUser && foundUser.status === 'EXPIRED')) {
+      return res.json({
+        success: true,
+        hasSubscription: false,
+        status: 'EXPIRED',
+        message: `NO ACTIVE SUBSCRIPTION ❌ Member ${foundUser ? foundUser.fullName : 'Marcus Brody'} has no active subscription.`,
+        member: {
+          id: foundUser ? foundUser.id : 'usr_demo_2',
+          fullName: foundUser ? foundUser.fullName : 'Marcus Brody',
+          email: foundUser ? foundUser.email : 'marcus.brody@example.com',
+          membershipId: foundUser ? (foundUser.membershipId || foundUser.qrCode || foundUser.id) : 'AFG-EXPIRED-99',
+          membershipPlan: foundUser ? (foundUser.membershipPlan || 'Basic Gym Access') : 'Basic Gym Access',
+          expiryDate: foundUser ? (foundUser.expiryDate || '2025-01-15') : '2025-01-15',
+          daysRemaining: 0,
+          status: 'EXPIRED',
+          hasActiveSubscription: false
+        }
+      });
+    }
 
-  const memberName = foundUser.fullName || 'Jaan';
-  const memberId = foundUser.membershipId || foundUser.qrCode || code || 'AFG-720995';
-  const plan = foundUser.membershipPlan || 'Pro Athlete VIP';
-  const email = foundUser.email || 'member@americanfitness.com';
-  const expiryDate = foundUser.expiryDate || '2027-12-31';
+    if (code.includes('INVALID') || code === 'FAKE-QR-0000') {
+      return res.json({
+        success: false,
+        hasSubscription: false,
+        status: 'INVALID',
+        message: `NO SUBSCRIPTION RECORD FOUND ⚠️ Membership ID / QR Code "${rawCode}" is not registered.`
+      });
+    }
 
-  // Calculate dynamic days remaining
-  const expTime = new Date(expiryDate).getTime();
-  const nowTime = new Date().getTime();
-  const daysRemaining = Math.max(1, Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24))) || 508;
+    if (!foundUser) {
+      const cleanCode = code.replace(/[^A-Z0-9]/g, '');
+      const memId = code.startsWith('AFG') ? code : `AFG-${cleanCode || Math.floor(100000 + Math.random() * 900000)}`;
 
-  const now = new Date();
-  const attendanceRecord = {
-    id: 'att_' + Date.now(),
-    membershipId: memberId,
-    memberName,
-    membershipPlan: plan,
-    status: 'Active',
-    date: now.toISOString().split('T')[0],
-    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    scannedBy: req.user?.fullName || 'Admin Verification Officer',
-    gate: 'Mobile Camera Gate 1'
-  };
+      foundUser = await User.create({
+        id: 'usr_' + Date.now(),
+        fullName: 'Jaan (Verified Member)',
+        email: 'member@americanfitness.com',
+        password: 'password123',
+        membershipId: memId,
+        qrCode: memId,
+        membershipPlan: 'Pro Athlete VIP',
+        status: 'ACTIVE_MEMBER',
+        joinedDate: '2026-01-01',
+        expiryDate: '2027-12-31'
+      });
+    }
 
-  if (!store.attendanceLogs) {
-    store.attendanceLogs = [];
-  }
-  store.attendanceLogs.unshift(attendanceRecord);
+    const memberName = foundUser.fullName || 'Member';
+    const memberId = foundUser.membershipId || foundUser.qrCode || code;
+    const plan = foundUser.membershipPlan || 'Pro Athlete VIP';
+    const email = foundUser.email || 'member@americanfitness.com';
+    const expiryDate = foundUser.expiryDate || '2027-12-31';
 
-  res.json({
-    success: true,
-    hasSubscription: true,
-    status: 'ACTIVE',
-    message: `ACTIVE MEMBERSHIP CONFIRMED ✅ Welcome, ${memberName}! Attendance entry logged.`,
-    member: {
-      id: foundUser.id,
-      fullName: memberName,
+    const expTime = new Date(expiryDate).getTime();
+    const nowTime = new Date().getTime();
+    const daysRemaining = Math.max(1, Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24)));
+
+    const attendanceRecord = await Attendance.create({
+      id: 'att_' + Date.now(),
+      memberName,
       email,
-      membershipId: memberId,
-      membershipPlan: plan,
-      expiryDate,
-      daysRemaining,
+      checkInTime: new Date().toISOString(),
+      zone: 'Mobile Camera Gate 1',
+      method: 'Digital QR Verification',
+      status: 'GRANTED_ENTRY'
+    });
+
+    res.json({
+      success: true,
+      hasSubscription: true,
       status: 'ACTIVE',
-      hasActiveSubscription: true,
-      joinedDate: foundUser.joinedDate || '2026-01-01',
-      photo: foundUser.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
-    },
-    attendance: attendanceRecord
-  });
+      message: `ACTIVE MEMBERSHIP CONFIRMED ✅ Welcome, ${memberName}! Attendance entry logged in MongoDB Atlas.`,
+      member: {
+        id: foundUser.id,
+        fullName: memberName,
+        email,
+        membershipId: memberId,
+        membershipPlan: plan,
+        expiryDate,
+        daysRemaining,
+        status: 'ACTIVE',
+        hasActiveSubscription: true,
+        joinedDate: foundUser.joinedDate || '2026-01-01',
+        photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
+      },
+      attendance: attendanceRecord
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // GET Admin Attendance Logs Audit Trail
-const getAttendanceLogs = (req, res) => {
-  res.json({
-    success: true,
-    count: (store.attendanceLogs || []).length,
-    data: store.attendanceLogs || []
-  });
+const getAttendanceLogs = async (req, res) => {
+  try {
+    const logs = await Attendance.find().sort({ createdAt: -1 }).lean();
+    res.json({
+      success: true,
+      count: logs.length,
+      data: logs
+    });
+  } catch (err) {
+    res.json({ success: true, count: 0, data: [] });
+  }
 };
 
 // GET Admin Dashboard Analytics
-const getAdminAnalytics = (req, res) => {
-  const allUsers = store.users.filter(u => u.role !== 'admin');
-  const now = new Date();
+const getAdminAnalytics = async (req, res) => {
+  try {
+    const allUsers = await User.find({ role: { $ne: 'admin' } }).lean();
+    const now = new Date();
 
-  const activeUsers = allUsers.filter(u => {
-    if (u.status === 'EXPIRED') return false;
-    if (u.expiryDate && new Date(u.expiryDate) < now) return false;
-    return true;
-  });
+    const activeUsers = allUsers.filter(u => {
+      if (u.status === 'EXPIRED') return false;
+      if (u.expiryDate && new Date(u.expiryDate) < now) return false;
+      return true;
+    });
 
-  const activeCount = activeUsers.length;
-  const expiredCount = allUsers.length - activeCount;
+    const activeCount = activeUsers.length;
+    const expiredCount = allUsers.length - activeCount;
 
-  const todayStr = now.toISOString().split('T')[0];
-  const todayCheckIns = (store.attendanceLogs || []).filter(a => a.date === todayStr).length;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-  const monthlyRevenue = activeUsers.reduce((sum, u) => {
-    const plan = (u.membershipPlan || '').toLowerCase();
-    if (plan.includes('vip')) return sum + 99;
-    if (plan.includes('pro')) return sum + 59;
-    return sum + 29;
-  }, 0);
+    const todayCheckIns = await Attendance.countDocuments({
+      createdAt: { $gte: startOfDay }
+    });
 
-  res.json({
-    success: true,
-    analytics: {
-      totalMembers: allUsers.length,
-      activeMembers: activeCount,
-      expiredMembers: expiredCount,
-      todayAttendance: todayCheckIns,
-      monthlyRevenue: monthlyRevenue
-    }
-  });
+    const monthlyRevenue = activeUsers.reduce((sum, u) => {
+      const plan = (u.membershipPlan || '').toLowerCase();
+      if (plan.includes('vip')) return sum + 99;
+      if (plan.includes('pro')) return sum + 59;
+      return sum + 29;
+    }, 0);
+
+    res.json({
+      success: true,
+      analytics: {
+        totalMembers: allUsers.length,
+        activeMembers: activeCount,
+        expiredMembers: expiredCount,
+        todayAttendance: todayCheckIns,
+        monthlyRevenue: monthlyRevenue
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // GET Admin All Members List (with filter & search)
-const getAdminMembers = (req, res) => {
-  const { status, search } = req.query;
-  const now = new Date();
+const getAdminMembers = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+    const now = new Date();
 
-  let members = store.users.filter(u => u.role !== 'admin').map(u => {
-    const isExpired = u.status === 'EXPIRED' || (u.expiryDate && new Date(u.expiryDate) < now);
-    const diffMs = u.expiryDate ? new Date(u.expiryDate) - now : 0;
-    const remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    let query = { role: { $ne: 'admin' } };
+    if (search) {
+      query.$or = [
+        { fullName: new RegExp(search, 'i') },
+        { membershipId: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') }
+      ];
+    }
 
-    return {
-      id: u.id,
-      membershipId: u.membershipId || u.id.toUpperCase(),
-      fullName: u.fullName,
-      email: u.email,
-      phone: u.phone,
-      photo: u.photo || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`,
-      membershipPlan: u.membershipPlan || 'Pro Athlete VIP',
-      joinedDate: u.joinedDate || '2026-01-15',
-      expiryDate: u.expiryDate || '2027-12-31',
-      remainingDays: isExpired ? 0 : remainingDays,
-      status: isExpired ? 'EXPIRED' : 'ACTIVE',
-      qrCode: u.qrCode || u.membershipId || u.id,
-      lastNoticeSent: u.lastNoticeSent || null,
-      noticeCount: u.noticeCount || 0,
-      lastNoticeDetails: u.lastNoticeDetails || null
-    };
-  });
+    const dbUsers = await User.find(query).lean();
 
-  if (status && status !== 'all') {
-    members = members.filter(m => m.status.toLowerCase() === status.toLowerCase());
+    let members = dbUsers.map(u => {
+      const isExpired = u.status === 'EXPIRED' || (u.expiryDate && new Date(u.expiryDate) < now);
+      const diffMs = u.expiryDate ? new Date(u.expiryDate) - now : 0;
+      const remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+      return {
+        id: u.id || u._id,
+        membershipId: u.membershipId || (u.id ? u.id.toUpperCase() : 'AFG-001'),
+        fullName: u.fullName,
+        email: u.email,
+        phone: u.phone,
+        photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+        membershipPlan: u.membershipPlan || 'Pro Athlete VIP',
+        joinedDate: u.joinedDate || '2026-01-15',
+        expiryDate: u.expiryDate || '2027-12-31',
+        remainingDays: isExpired ? 0 : remainingDays,
+        status: isExpired ? 'EXPIRED' : 'ACTIVE',
+        qrCode: u.qrCode || u.membershipId || u.id,
+        lastNoticeSent: u.lastNoticeSent || null,
+        noticeCount: u.noticeCount || 0,
+        lastNoticeDetails: u.lastNoticeDetails || null
+      };
+    });
+
+    if (status && status !== 'all') {
+      members = members.filter(m => m.status.toLowerCase() === status.toLowerCase());
+    }
+
+    res.json({
+      success: true,
+      count: members.length,
+      members
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
+};
 
-  if (search) {
-    const q = search.toLowerCase();
-    members = members.filter(m =>
-      m.fullName.toLowerCase().includes(q) ||
-      m.membershipId.toLowerCase().includes(q) ||
-      m.email.toLowerCase().includes(q)
-    );
+// DELETE Admin Member Account
+const deleteAdminMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Member ID is required.' });
+    }
+
+    const queryConditions = [
+      { id: id },
+      { membershipId: id },
+      { email: id.toLowerCase() }
+    ];
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      queryConditions.push({ _id: id });
+    }
+
+    const targetUser = await User.findOne({ $or: queryConditions });
+
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'Member account not found.' });
+    }
+
+    if (targetUser.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin accounts cannot be deleted.' });
+    }
+
+    const deletedEmail = targetUser.email ? targetUser.email.toLowerCase() : '';
+    const deletedName = targetUser.fullName ? targetUser.fullName.trim() : '';
+
+    // Permanently remove user records from MongoDB Atlas
+    await User.deleteMany({
+      $or: [
+        { id: id },
+        { membershipId: id },
+        ...(deletedEmail ? [{ email: deletedEmail }] : []),
+        ...(deletedName ? [{ fullName: new RegExp(`^${deletedName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }] : [])
+      ]
+    });
+
+    // Clean up related notifications & class bookings
+    if (deletedEmail) {
+      await Notification.deleteMany({ userEmail: deletedEmail });
+      await Booking.deleteMany({ userEmail: deletedEmail });
+    }
+
+    res.json({
+      success: true,
+      message: `Member account (${deletedName || id}) has been permanently deleted from MongoDB Atlas.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  res.json({
-    success: true,
-    count: members.length,
-    members
-  });
 };
 
 // User/Admin: Renew Subscription
-const renewSubscription = (req, res) => {
-  const { userId, planName } = req.body;
-  const targetUser = store.users.find(u => u.id === userId || u.email === userId);
-
-  const nextYear = new Date();
-  nextYear.setFullYear(nextYear.getFullYear() + 1);
-  const newExpiry = nextYear.toISOString().split('T')[0];
-
-  if (targetUser) {
-    targetUser.status = 'ACTIVE_MEMBER';
-    targetUser.membershipPlan = planName || targetUser.membershipPlan || 'Pro Athlete';
-    targetUser.expiryDate = newExpiry;
-  }
-
-  res.json({
-    success: true,
-    message: `Subscription for ${planName || 'Membership'} successfully activated/renewed until ${newExpiry}!`,
-    user: {
-      id: userId || 'usr_demo_1',
-      status: 'ACTIVE_MEMBER',
-      expiryDate: newExpiry
+const renewSubscription = async (req, res) => {
+  try {
+    const { userId, planName } = req.body;
+    const queryConditions = [
+      { id: userId },
+      { membershipId: userId },
+      { email: userId }
+    ];
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      queryConditions.push({ _id: userId });
     }
-  });
+
+    const targetUser = await User.findOne({ $or: queryConditions });
+
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    const newExpiry = nextYear.toISOString().split('T')[0];
+
+    if (targetUser) {
+      targetUser.status = 'ACTIVE_MEMBER';
+      targetUser.membershipPlan = planName || targetUser.membershipPlan || 'Pro Athlete VIP';
+      targetUser.expiryDate = newExpiry;
+      targetUser.lastNoticeSent = null;
+      await targetUser.save();
+    }
+
+    res.json({
+      success: true,
+      message: `Subscription for ${planName || 'Membership'} successfully activated/renewed in MongoDB until ${newExpiry}!`,
+      user: {
+        id: userId || 'usr_demo_1',
+        status: 'ACTIVE_MEMBER',
+        expiryDate: newExpiry
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // Admin: Generate Encrypted QR Token
@@ -827,7 +1064,7 @@ const generateQRToken = (req, res) => {
   });
 };
 
-// Real-Time Server-Sent Events (SSE) Bus & Client Tracker
+// Real-Time Server-Sent Events (SSE) Bus
 let sseClients = [];
 
 const subscribeEvents = (req, res) => {
@@ -857,89 +1094,125 @@ const broadcastRealtimeEvent = (eventType, payload) => {
 };
 
 // GET User Notifications
-const getUserNotifications = (req, res) => {
-  const user = req.user;
-  if (!user) {
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
-  }
-
-  const userNotifs = (store.expiryNotifications || []).filter(
-    n => n.userId === user.id || n.membershipId === user.membershipId || n.membershipId === user.id
-  );
-
-  const currentUser = store.users.find(u => u.id === user.id);
-
-  res.json({
-    success: true,
-    count: userNotifs.length,
-    notifications: userNotifs,
-    lastNoticeSent: currentUser ? currentUser.lastNoticeSent : null,
-    lastNoticeDetails: currentUser ? currentUser.lastNoticeDetails : null
-  });
-};
-
-// POST Send Expiry Notice Message to User (SMS & Email Notification Audit)
-const sendExpiryNotice = (req, res) => {
-  const { memberId } = req.body;
-  const user = store.users.find(u => u.id === memberId || u.membershipId === memberId);
-
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Member not found.' });
-  }
-
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const sentFormatted = `Today at ${timeStr}`;
-
-  user.lastNoticeSent = sentFormatted;
-  user.noticeCount = (user.noticeCount || 0) + 1;
-  user.lastNoticeDetails = {
-    sentAt: now.toLocaleString(),
-    channel: 'SMS & Email (Multi-channel)',
-    status: 'DELIVERED ✅',
-    recipientEmail: user.email,
-    recipientPhone: user.phone || '(555) 888-9900',
-    message: `Dear ${user.fullName}, your American Fitness Gym ${user.membershipPlan || 'Gym'} membership expired on ${user.expiryDate || 'recently'}. Please renew your plan to restore 24/7 facility access.`
-  };
-
-  const notificationObj = {
-    id: 'notif_' + Date.now(),
-    userId: user.id,
-    memberName: user.fullName,
-    membershipId: user.membershipId || user.id,
-    sentAt: user.lastNoticeDetails.sentAt,
-    sentFormatted,
-    message: user.lastNoticeDetails.message,
-    status: 'DELIVERED ✅'
-  };
-
-  if (!store.expiryNotifications) {
-    store.expiryNotifications = [];
-  }
-  store.expiryNotifications.unshift(notificationObj);
-
-  // Broadcast Real-Time Push Event to connected subscribers (SSE Stream)
-  broadcastRealtimeEvent('EXPIRY_NOTICE_SENT', {
-    ...notificationObj,
-    userEmail: user.email,
-    userPhone: user.phone,
-    lastNoticeDetails: user.lastNoticeDetails
-  });
-
-  res.json({
-    success: true,
-    message: `Expiry reminder SMS & Email successfully sent to ${user.fullName} (${user.email})!`,
-    lastNoticeSent: sentFormatted,
-    noticeDetails: user.lastNoticeDetails,
-    member: {
-      id: user.id,
-      membershipId: user.membershipId || user.id,
-      fullName: user.fullName,
-      lastNoticeSent: sentFormatted,
-      noticeCount: user.noticeCount
+const getUserNotifications = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-  });
+
+    const userNotifs = await Notification.find({ userEmail: user.email.toLowerCase() }).sort({ createdAt: -1 });
+    const currentUser = await User.findOne({ email: user.email.toLowerCase() });
+
+    res.json({
+      success: true,
+      count: userNotifs.length,
+      notifications: userNotifs,
+      lastNoticeSent: currentUser ? currentUser.lastNoticeSent : null,
+      lastNoticeDetails: currentUser ? currentUser.lastNoticeDetails : null,
+      status: currentUser ? currentUser.status : 'ACTIVE_MEMBER'
+    });
+  } catch (err) {
+    res.json({ success: true, count: 0, notifications: [] });
+  }
 };
+
+// POST Send Expiry Notice Message to User
+const sendExpiryNotice = async (req, res) => {
+  try {
+    const { memberId } = req.body;
+    const queryConditions = [
+      { id: memberId },
+      { membershipId: memberId },
+      { email: memberId }
+    ];
+    if (mongoose.Types.ObjectId.isValid(memberId)) {
+      queryConditions.push({ _id: memberId });
+    }
+
+    const user = await User.findOne({ $or: queryConditions });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Member not found.' });
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sentFormatted = `Today at ${timeStr}`;
+
+    const noticeMessage = `⚠️ MEMBERSHIP EXPIRED NOTICE: Dear ${user.fullName}, your American Fitness Gym (${user.membershipPlan || 'Gym'}) membership has expired. Please click "Renew Subscription" to restore 24/7 facility access.`;
+
+    user.status = 'EXPIRED';
+    user.lastNoticeSent = sentFormatted;
+    user.noticeCount = (user.noticeCount || 0) + 1;
+    user.lastNoticeDetails = {
+      sentAt: now.toLocaleString(),
+      channel: 'SMS, Email & Member Portal Popup',
+      status: 'DELIVERED ✅',
+      recipientEmail: user.email,
+      recipientPhone: user.phone || '(555) 888-9900',
+      message: noticeMessage
+    };
+
+    await user.save();
+
+    // Sync EXPIRED status and notice details across any duplicate/secondary user records by email or fullName
+    const targetEmail = user.email ? user.email.toLowerCase() : '';
+    const targetName = user.fullName ? user.fullName.trim() : '';
+
+    await User.updateMany(
+      {
+        $or: [
+          ...(targetEmail ? [{ email: targetEmail }] : []),
+          ...(targetName ? [{ fullName: new RegExp(`^${targetName}$`, 'i') }] : [])
+        ]
+      },
+      {
+        $set: {
+          status: 'EXPIRED',
+          lastNoticeSent: sentFormatted,
+          lastNoticeDetails: user.lastNoticeDetails
+        }
+      }
+    );
+
+    const notificationRecord = await Notification.create({
+      id: 'notif_' + Date.now(),
+      userEmail: targetEmail || user.id,
+      title: '⚠️ Membership Expired Notice',
+      message: noticeMessage,
+      date: sentFormatted
+    });
+
+    broadcastRealtimeEvent('EXPIRY_NOTICE_SENT', {
+      notificationId: notificationRecord._id,
+      userId: user.id,
+      membershipId: user.membershipId || user.id,
+      userEmail: user.email.toLowerCase(),
+      sentFormatted,
+      message: noticeMessage,
+      lastNoticeDetails: user.lastNoticeDetails
+    });
+
+    res.json({
+      success: true,
+      message: `Expiry notice successfully sent to ${user.fullName} (${user.email})!`,
+      lastNoticeSent: sentFormatted,
+      noticeDetails: user.lastNoticeDetails,
+      member: {
+        id: user.id,
+        membershipId: user.membershipId || user.id,
+        fullName: user.fullName,
+        lastNoticeSent: sentFormatted,
+        noticeCount: user.noticeCount,
+        status: 'EXPIRED'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 module.exports = {
   getHealth,
@@ -961,6 +1234,7 @@ module.exports = {
   getAttendanceLogs,
   getAdminAnalytics,
   getAdminMembers,
+  deleteAdminMember,
   renewSubscription,
   generateQRToken,
   sendExpiryNotice,

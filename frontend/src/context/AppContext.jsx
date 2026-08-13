@@ -523,29 +523,36 @@ export function AppProvider({ children }) {
       };
     } catch (err) {}
 
-    // 3. Fast Poll Fallback (Every 3.5 Seconds)
+    // 3. Fast Poll Fallback (Every 2 Seconds)
     const interval = setInterval(async () => {
       try {
         const res = await fetchUserNotifications();
-        if (res && res.success && res.lastNoticeSent) {
-          if (res.lastNoticeSent !== user.lastNoticeSent) {
+        if (res && res.success) {
+          if (res.lastNoticeSent && res.lastNoticeSent !== user?.lastNoticeSent) {
             triggerRealtimeNotice({
               sentFormatted: res.lastNoticeSent,
               sentAt: res.lastNoticeDetails?.sentAt,
               message: res.lastNoticeDetails?.message,
               lastNoticeDetails: res.lastNoticeDetails
             });
+          } else if (res.status && res.status !== user?.status) {
+            setUser(prev => {
+              if (!prev) return prev;
+              const updated = { ...prev, status: res.status, lastNoticeSent: res.lastNoticeSent, lastNoticeDetails: res.lastNoticeDetails };
+              if (typeof window !== 'undefined') localStorage.setItem('afg_user', JSON.stringify(updated));
+              return updated;
+            });
           }
         }
       } catch (e) {}
-    }, 3500);
+    }, 2000);
 
     return () => {
       if (channel) channel.close();
       if (eventSource) eventSource.close();
       clearInterval(interval);
     };
-  }, [user?.id, user?.lastNoticeSent]);
+  }, [user?.id, user?.lastNoticeSent, user?.status]);
 
   return (
     <AppContext.Provider

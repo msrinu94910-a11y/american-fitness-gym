@@ -214,7 +214,6 @@ export default function DashboardPage({ setActivePage }) {
         {/* Automatic Expiry Notice Alert Banner in User Dashboard */}
         {(user.status === 'EXPIRED' || user.status === 'EXPIRED_MEMBER' || user.lastNoticeSent || (user.expiryDate && new Date(user.expiryDate) < new Date())) && (
           <div
-            className="glass-card"
             style={{
               padding: '1.5rem 1.75rem',
               marginBottom: '2rem',

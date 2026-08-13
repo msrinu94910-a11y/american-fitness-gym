@@ -217,7 +217,7 @@ const classes = [
   }
 ];
 
-// Seed Registered Users & Admin Account (Only Seeded Admin - All mock customer users purged)
+// Seed Registered Users & Admin Account
 const users = [
   {
     id: 'usr_admin_1',
@@ -256,6 +256,93 @@ const users = [
     rewardPoints: 9999,
     workoutStreakDays: 0,
     role: 'admin'
+  },
+  {
+    id: 'usr_exp_1',
+    membershipId: 'AFG-EXP-001',
+    fullName: 'Marcus Brody',
+    email: 'marcus.brody@example.com',
+    password: 'password123',
+    phone: '(555) 345-6789',
+    membershipPlan: 'Basic Gym Access',
+    status: 'EXPIRED',
+    joinedDate: '2024-01-10',
+    expiryDate: '2025-01-15',
+    qrCode: 'AFG-EXP-001',
+    emergencyContact: 'Sarah Brody (555-987-6543)',
+    fitnessGoal: 'Weight Loss & Cardio',
+    totalCheckIns: 42,
+    rewardPoints: 150,
+    workoutStreakDays: 0,
+    role: 'user',
+    lastNoticeSent: 'Today at 09:15 AM',
+    noticeCount: 1,
+    lastNoticeDetails: {
+      sentAt: '2026-08-13 09:15 AM',
+      channel: 'SMS, Email & Member Portal Popup',
+      status: 'DELIVERED ✅',
+      recipientEmail: 'marcus.brody@example.com',
+      recipientPhone: '(555) 345-6789',
+      message: '⚠️ MEMBERSHIP EXPIRED NOTICE: Dear Marcus Brody, your Basic Gym Access membership has expired. Please click "Renew Subscription" to restore 24/7 facility access.'
+    }
+  },
+  {
+    id: 'usr_exp_2',
+    membershipId: 'AFG-EXP-002',
+    fullName: 'Sarah Connor',
+    email: 'sarah.connor@example.com',
+    password: 'password123',
+    phone: '(555) 789-0123',
+    membershipPlan: 'Pro Athlete VIP',
+    status: 'EXPIRED',
+    joinedDate: '2024-06-15',
+    expiryDate: '2025-05-30',
+    qrCode: 'AFG-EXP-002',
+    emergencyContact: 'John Connor (555-111-2222)',
+    fitnessGoal: 'Tactical Fitness & Endurance',
+    totalCheckIns: 98,
+    rewardPoints: 320,
+    workoutStreakDays: 0,
+    role: 'user',
+    lastNoticeSent: 'Yesterday at 04:30 PM',
+    noticeCount: 2,
+    lastNoticeDetails: {
+      sentAt: '2026-08-12 04:30 PM',
+      channel: 'SMS, Email & Member Portal Popup',
+      status: 'DELIVERED ✅',
+      recipientEmail: 'sarah.connor@example.com',
+      recipientPhone: '(555) 789-0123',
+      message: '⚠️ MEMBERSHIP EXPIRED NOTICE: Dear Sarah Connor, your Pro Athlete VIP membership has expired. Please click "Renew Subscription" to restore 24/7 facility access.'
+    }
+  },
+  {
+    id: 'usr_exp_3',
+    membershipId: 'AFG-EXP-003',
+    fullName: 'David Miller',
+    email: 'david.miller@example.com',
+    password: 'password123',
+    phone: '(555) 456-7890',
+    membershipPlan: 'VIP Elite',
+    status: 'EXPIRED',
+    joinedDate: '2023-11-01',
+    expiryDate: '2025-07-01',
+    qrCode: 'AFG-EXP-003',
+    emergencyContact: 'Emma Miller (555-333-4444)',
+    fitnessGoal: 'Hypertrophy & Muscle Gain',
+    totalCheckIns: 154,
+    rewardPoints: 600,
+    workoutStreakDays: 0,
+    role: 'user',
+    lastNoticeSent: 'Today at 08:00 AM',
+    noticeCount: 1,
+    lastNoticeDetails: {
+      sentAt: '2026-08-13 08:00 AM',
+      channel: 'SMS, Email & Member Portal Popup',
+      status: 'DELIVERED ✅',
+      recipientEmail: 'david.miller@example.com',
+      recipientPhone: '(555) 456-7890',
+      message: '⚠️ MEMBERSHIP EXPIRED NOTICE: Dear David Miller, your VIP Elite membership has expired. Please click "Renew Subscription" to restore 24/7 facility access.'
+    }
   }
 ];
 

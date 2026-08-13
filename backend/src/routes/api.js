@@ -38,6 +38,7 @@ router.post('/admin/verify-qr', controller.verifyQR);
 router.get('/admin/attendance', controller.getAttendanceLogs);
 router.get('/admin/analytics', controller.getAdminAnalytics);
 router.get('/admin/members', controller.getAdminMembers);
+router.delete('/admin/members/:id', controller.deleteAdminMember);
 router.post('/admin/generate-qr', controller.generateQRToken);
 router.post('/admin/send-expiry-notice', controller.sendExpiryNotice);
 // Real-Time Push Events Stream & Customer Notifications

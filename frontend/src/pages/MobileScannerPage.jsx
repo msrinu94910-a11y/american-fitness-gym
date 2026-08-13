@@ -3,12 +3,12 @@ import jsQR from 'jsqr';
 import { 
   Camera, QrCode, ShieldCheck, XCircle, AlertTriangle, AlertCircle, CheckCircle2, 
   Clock, User, Search, Sparkles, RefreshCw, Volume2, VolumeX, 
-  History, Smartphone, Lock, ArrowRight, ArrowLeft, LogOut, Zap, Check, Users, DollarSign,
-  UserCheck, UserX, Calendar, Filter, Image as ImageIcon, Send, CheckCheck, MessageSquare
+  History, Smartphone, Lock, ArrowRight, ArrowLeft, LogOut, Zap, Check, Users, DollarSign, TrendingUp,
+  UserCheck, UserX, Calendar, Filter, Image as ImageIcon, Send, CheckCheck, MessageSquare, Trash2
 } from 'lucide-react';
 import { 
   verifyMemberQR, fetchAttendanceLogs, fetchAdminAnalytics, 
-  fetchAdminMembers, renewMemberSubscription, generateMemberQRToken, sendExpiryNotice 
+  fetchAdminMembers, renewMemberSubscription, generateMemberQRToken, sendExpiryNotice, deleteAdminMember 
 } from '../services/api';
 import { useApp } from '../context/AppContext';
 import QRCodeSVG from '../components/common/QRCodeSVG';
@@ -74,6 +74,7 @@ export default function MobileScannerPage({ setActivePage }) {
   const [generatedQRModal, setGeneratedQRModal] = useState(null);
   const [noticeModalData, setNoticeModalData] = useState(null);
   const [userDashboardPreviewModal, setUserDashboardPreviewModal] = useState(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -580,7 +581,7 @@ export default function MobileScannerPage({ setActivePage }) {
               <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 800 }}>MONTHLY REVENUE</div>
               <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>₹{(analytics.monthlyRevenue || 0).toLocaleString()}</div>
             </div>
-            <DollarSign size={24} color="#0284c7" />
+            <TrendingUp size={24} color="#0284c7" />
           </div>
         </div>
 
@@ -1596,6 +1597,27 @@ export default function MobileScannerPage({ setActivePage }) {
                         </button>
                       </>
                     )}
+
+                    <button
+                      onClick={() => setDeleteConfirmModal(m)}
+                      style={{
+                        padding: '0.65rem 0.85rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        background: '#fef2f2',
+                        border: '1.5px solid #fca5a5',
+                        color: '#dc2626',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                        boxShadow: '0 2px 6px rgba(220, 38, 38, 0.05)'
+                      }}
+                    >
+                      <Trash2 size={16} color="#dc2626" /> Delete Member
+                    </button>
                   </div>
                 </div>
               ))
@@ -1815,7 +1837,9 @@ export default function MobileScannerPage({ setActivePage }) {
                         <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.badge}</span>
                         {m.popular && <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.68rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '12px' }}>MOST POPULAR</span>}
                       </div>
-                      <h4 style={{ color: '#0f172a', fontSize: '1.3rem', margin: '0.2rem 0 0.6rem 0', fontWeight: 900 }}>{m.name}</h4>
+                      <h4 style={{ color: '#0f172a', fontSize: '1.3rem', margin: '0.2rem 0 0.6rem 0', fontWeight: 900 }}>
+                        {m.name ? m.name.replace(/^MOST POPULAR\s*/i, '').trim() : 'Membership Plan'}
+                      </h4>
                       
                       {/* High-Contrast Rate Card */}
                       <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.85rem', flexWrap: 'wrap', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -2204,6 +2228,111 @@ export default function MobileScannerPage({ setActivePage }) {
                 }}
               >
                 Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Member Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 99999,
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+              border: '2px solid #ef4444',
+              borderRadius: '20px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '1.75rem',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(239, 68, 68, 0.35)',
+              color: '#ffffff'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f87171', fontWeight: 900, fontSize: '1.15rem' }}>
+                <Trash2 size={24} color="#ef4444" /> Permanently Delete Member
+              </div>
+              <button
+                onClick={() => setDeleteConfirmModal(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <XCircle size={22} />
+              </button>
+            </div>
+
+            <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff' }}>
+                Are you sure you want to delete <span style={{ color: '#fca5a5' }}>{deleteConfirmModal.fullName}</span>?
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginTop: '0.35rem', fontFamily: 'monospace' }}>
+                Member ID: {deleteConfirmModal.membershipId || deleteConfirmModal.id} • {deleteConfirmModal.email}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#fca5a5', marginTop: '0.5rem', fontWeight: 600 }}>
+                ⚠️ Warning: This will permanently remove the member's account, QR pass credentials, bookings, and notifications from MongoDB Atlas. This action cannot be undone.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={async () => {
+                  const res = await deleteAdminMember(deleteConfirmModal.id || deleteConfirmModal.membershipId);
+                  if (res && res.success) {
+                    showToast(res.message || `Member ${deleteConfirmModal.fullName} deleted successfully.`, 'success');
+                    setDeleteConfirmModal(null);
+                    await loadDashboardData();
+                  } else {
+                    showToast(res?.message || 'Failed to delete member.', 'error');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.8rem 1rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 900,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(220, 38, 38, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Trash2 size={16} /> Yes, Delete Account
+              </button>
+              <button
+                onClick={() => setDeleteConfirmModal(null)}
+                style={{
+                  padding: '0.8rem 1.25rem',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>

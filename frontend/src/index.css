@@ -784,14 +784,14 @@ html {
 }
 
 .glass-card {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
-  color: #0f172a !important;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  color: #0f172a;
 }
 
 .glass-card h1, .glass-card h2, .glass-card h3, .glass-card h4, .glass-card h5, .glass-card h6 {
-  color: #0f172a !important;
+  color: #0f172a;
 }
 
 .glass-card p, .glass-card label {
@@ -799,14 +799,22 @@ html {
 }
 
 .glass-card input, .glass-card select, .glass-card textarea {
-  background: #f8fafc !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
 }
 
-.glass-card input::placeholder, .glass-card textarea::placeholder {
-  color: #94a3b8 !important;
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
+
 
 
 

@@ -2,6 +2,7 @@
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
+
 function getAuthHeaders() {
   const token = localStorage.getItem('afg_token');
   const headers = { 'Content-Type': 'application/json' };
@@ -372,6 +373,18 @@ export async function sendExpiryNotice(memberId) {
         status: 'DELIVERED ✅'
       }
     };
+  }
+}
+
+export async function deleteAdminMember(memberId) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/members/${encodeURIComponent(memberId)}`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() }
+    });
+    return await res.json();
+  } catch (err) {
+    return { success: false, message: 'Failed to delete member account.' };
   }
 }
 
