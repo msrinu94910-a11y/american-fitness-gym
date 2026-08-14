@@ -495,58 +495,67 @@ export default function HomePage({ setActivePage }) {
             <p className="section-subtitle">Real-time dynamic pricing managed directly by gym administration. Choose your preferred plan to begin training.</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.75rem' }}>
-            {(cmsData?.memberships || []).map((plan) => (
-              <div
-                key={plan.id}
-                className="glass-card glass-card-glow scroll-reveal"
-                style={{
-                  padding: '2rem 1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  borderRadius: 'var(--radius-lg)',
-                  border: plan.popular ? '2px solid #0284C7' : '1px solid var(--border-glass)',
-                  background: '#ffffff',
-                  position: 'relative'
-                }}
-              >
-                {plan.popular && (
-                  <span className="badge badge-gold" style={{ position: 'absolute', top: '1rem', right: '1rem', background: '#0284C7', color: '#ffffff', fontWeight: 800 }}>
-                    MOST POPULAR
-                  </span>
-                )}
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284C7', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{plan.badge}</span>
-                <h3 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)', marginBottom: '0.4rem' }}>{plan.name}</h3>
-                
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.75rem 0' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>
-                    ₹{plan.monthlyPrice}
-                  </span>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/ month</span>
-                </div>
-
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '1.25rem' }}>{plan.description}</p>
-
-                <div style={{ flex: 1, marginBottom: '1.5rem' }}>
-                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {(plan.features || []).map((feat, fIdx) => (
-                      <li key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.84rem', color: 'var(--text-main)' }}>
-                        <Check size={16} color="#0284C7" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  onClick={() => setActivePage('memberships')}
-                  className={plan.popular ? "btn btn-primary" : "btn btn-secondary"}
-                  style={{ width: '100%', height: '44px', fontSize: '0.9rem' }}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1.25rem' }}>
+            {(() => {
+              const rawPlans = cmsData?.memberships || [];
+              const getCardOrder = (plan) => {
+                const name = (plan.name || '').toLowerCase();
+                const badge = (plan.badge || '').toLowerCase();
+                const tier = (plan.tier || '').toLowerCase();
+                if (name.includes('basic') || badge.includes('starter') || tier.includes('starter') || tier === 'basic') return 1;
+                if (name.includes('vip') || badge.includes('vip') || tier.includes('vip') || tier === 'elite') return 2;
+                if (name.includes('pro') || badge.includes('pro') || tier.includes('pro') || tier === 'popular') return 3;
+                return 4;
+              };
+              const sortedPlans = [...rawPlans].sort((a, b) => getCardOrder(a) - getCardOrder(b));
+              return sortedPlans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className="glass-card pricing-hover-card"
+                  style={{
+                    padding: '2rem 1.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1.5px solid #cbd5e1',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+                    background: '#ffffff',
+                    position: 'relative'
+                  }}
                 >
-                  {plan.ctaText || 'Select Plan'} <ArrowRight size={16} />
-                </button>
-              </div>
-            ))}
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284C7', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{plan.badge}</span>
+                  <h3 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-heading)', color: 'var(--text-main)', marginBottom: '0.4rem' }}>{plan.name}</h3>
+                  
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.75rem 0' }}>
+                    <span style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: 'var(--text-main)' }}>
+                      ₹{plan.monthlyPrice}
+                    </span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/ month</span>
+                  </div>
+
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '1.25rem' }}>{plan.description}</p>
+
+                  <div style={{ flex: 1, marginBottom: '1.5rem' }}>
+                    <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {(plan.features || []).map((feat, fIdx) => (
+                        <li key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.84rem', color: 'var(--text-main)' }}>
+                          <Check size={16} color="#0284C7" />
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => setActivePage('memberships')}
+                    className="btn btn-secondary card-cta-btn"
+                    style={{ width: '100%', height: '44px', fontSize: '0.9rem', fontWeight: 800, borderRadius: '12px' }}
+                  >
+                    {plan.ctaText || 'Select Plan'} <ArrowRight size={16} />
+                  </button>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       </section>
@@ -593,14 +602,34 @@ export default function HomePage({ setActivePage }) {
       </section>
 
       {/* 7. Final Call to Action */}
-      <section style={{ padding: '4rem 0', background: 'var(--gradient-primary)', textAlign: 'center' }}>
+      <section style={{ padding: '4.5rem 0', background: 'linear-gradient(135deg, #0284c7 0%, #1e40af 100%)', textAlign: 'center', boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.1)' }}>
         <div className="container scroll-reveal reveal-scale">
-          <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.5rem)', color: '#fff', marginBottom: '0.75rem', fontFamily: 'var(--font-heading)' }}>READY TO BEGIN YOUR FITNESS JOURNEY?</h2>
-          <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 'clamp(0.95rem, 2.4vw, 1.15rem)', maxWidth: '650px', margin: '0 auto 1.5rem auto' }}>
+          <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.5rem)', color: '#ffffff', marginBottom: '0.75rem', fontFamily: 'var(--font-heading)', fontWeight: 900, textShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            READY TO BEGIN YOUR FITNESS JOURNEY?
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.92)', fontSize: 'clamp(0.95rem, 2.4vw, 1.15rem)', maxWidth: '650px', margin: '0 auto 1.75rem auto', lineHeight: '1.6', fontWeight: 500 }}>
             Join American Fitness Gym today and gain immediate 24/7 access to our Rogue weight floor, Woodway cardio deck, 1-on-1 master coaching, and organic fuel smoothie bar.
           </p>
-          <button onClick={() => setActivePage('memberships')} className="btn btn-gold" style={{ padding: '0.8rem 1.8rem', fontSize: '1rem', height: '46px' }}>
-            View Membership Plans <ArrowRight size={17} />
+          <button
+            onClick={() => setActivePage('memberships')}
+            style={{
+              padding: '0.85rem 2rem',
+              fontSize: '1.05rem',
+              height: '50px',
+              borderRadius: 'var(--radius-full)',
+              background: '#ffffff',
+              color: '#0284c7',
+              border: 'none',
+              fontWeight: 900,
+              cursor: 'pointer',
+              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            View Membership Plans <ArrowRight size={18} color="#0284c7" />
           </button>
         </div>
       </section>      {/* Scroll Back to Top Button */}

@@ -66,7 +66,17 @@ const DEFAULT_PLANS = [
 
 export default function MembershipsPage({ setActivePage }) {
   const { user, setUser, showToast, cmsData } = useApp();
-  const plans = (cmsData?.memberships && cmsData.memberships.length > 0) ? cmsData.memberships : DEFAULT_PLANS;
+  const rawPlans = (cmsData?.memberships && cmsData.memberships.length > 0) ? cmsData.memberships : DEFAULT_PLANS;
+  const getCardOrder = (plan) => {
+    const name = (plan.name || '').toLowerCase();
+    const badge = (plan.badge || '').toLowerCase();
+    const tier = (plan.tier || '').toLowerCase();
+    if (name.includes('basic') || badge.includes('starter') || tier.includes('starter') || tier === 'basic') return 1;
+    if (name.includes('vip') || badge.includes('vip') || tier.includes('vip') || tier === 'elite') return 2;
+    if (name.includes('pro') || badge.includes('pro') || tier.includes('pro') || tier === 'popular') return 3;
+    return 4;
+  };
+  const plans = [...rawPlans].sort((a, b) => getCardOrder(a) - getCardOrder(b));
   const [isAnnual, setIsAnnual] = useState(true);
   const [activeFaq, setActiveFaq] = useState(0);
 
@@ -185,8 +195,8 @@ export default function MembershipsPage({ setActivePage }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-            gap: '1.75rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))',
+            gap: '1.25rem',
             alignItems: 'stretch',
             marginBottom: '5rem'
           }}
@@ -200,21 +210,21 @@ export default function MembershipsPage({ setActivePage }) {
             return (
               <div
                 key={plan.id}
-                className="glass-card"
+                className="glass-card pricing-hover-card"
                 style={{
                   padding: '2rem 1.5rem',
                   display: 'flex',
                   flexDirection: 'column',
                   position: 'relative',
-                  background: isPopular ? '#ffffff' : 'var(--bg-card)',
-                  border: isPopular ? '2.5px solid #0284C7' : '1px solid var(--border-glass)',
-                  boxShadow: isPopular ? '0 12px 40px rgba(2, 132, 199, 0.18)' : 'var(--shadow-card)',
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
                   borderRadius: 'var(--radius-lg)'
                 }}
               >
                 {plan.badge && (
                   <span
-                    className={isPopular ? 'badge badge-red' : 'badge badge-gold'}
+                    className="badge badge-gold"
                     style={{ position: 'absolute', top: '1.25rem', right: '1.25rem' }}
                   >
                     {plan.badge}
@@ -252,8 +262,8 @@ export default function MembershipsPage({ setActivePage }) {
 
                 <button
                   onClick={() => handleSelectPlan(plan)}
-                  className={isPopular ? 'btn btn-primary' : 'btn btn-secondary'}
-                  style={{ width: '100%', height: '46px', fontSize: '0.95rem' }}
+                  className="btn btn-secondary card-cta-btn"
+                  style={{ width: '100%', height: '46px', fontSize: '0.95rem', fontWeight: 800, borderRadius: '12px' }}
                 >
                   Activate {plan.name} Pass <ArrowRight size={16} />
                 </button>

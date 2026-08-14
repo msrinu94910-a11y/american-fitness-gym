@@ -34,20 +34,24 @@ const verifyToken = async (req, res, next) => {
       const rawName = email.split('@')[0];
       const fullName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
       const isStaffAdmin = email.includes('admin');
+      const isTrainer = email.includes('trainer');
+      let role = 'user';
+      if (isStaffAdmin) role = 'admin';
+      else if (isTrainer) role = 'trainer';
 
       const newId = 'usr_' + Buffer.from(email).toString('hex').slice(0, 10);
       const code = 'AFG-QR-' + Math.floor(100000 + Math.random() * 900000) + '-' + fullName.toUpperCase();
 
       user = await User.create({
         id: newId,
-        fullName: fullName || 'Gym Member',
+        fullName: fullName || (isTrainer ? 'Master Trainer' : 'Gym Member'),
         email: email,
         password: 'password123',
         phone: '(555) 234-5678',
-        membershipPlan: isStaffAdmin ? 'Staff Admin' : 'Pro Athlete VIP',
+        membershipPlan: isStaffAdmin ? 'Staff Admin' : (isTrainer ? 'Elite Master Trainer' : 'Pro Athlete VIP'),
         membershipId: code,
         qrCode: code,
-        role: isStaffAdmin ? 'admin' : 'user',
+        role: role,
         status: 'ACTIVE_MEMBER',
         joinedDate: new Date().toISOString().split('T')[0],
         emergencyContact: 'Not provided',
@@ -73,6 +77,26 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+/**
+ * Role-Based Access Control (RBAC) middleware
+ */
+const verifyRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+    const userRole = req.user.role || (req.user.email?.includes('admin') ? 'admin' : (req.user.email?.includes('trainer') ? 'trainer' : 'user'));
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. ${allowedRoles.join(' or ')} permission required.`
+      });
+    }
+    next();
+  };
+};
+
 module.exports = {
-  verifyToken
+  verifyToken,
+  verifyRole
 };

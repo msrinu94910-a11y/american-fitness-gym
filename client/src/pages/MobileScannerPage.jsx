@@ -1817,16 +1817,16 @@ export default function MobileScannerPage({ setActivePage }) {
                       </div>
                       <h4 style={{ color: '#0f172a', fontSize: '1.3rem', margin: '0.2rem 0 0.6rem 0', fontWeight: 900 }}>{m.name}</h4>
                       
-                      {/* High-Contrast Rate Card */}
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.85rem', flexWrap: 'wrap', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      {/* High-Contrast 2-Column Rate Card */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', marginBottom: '0.85rem', background: '#f8fafc', padding: '0.85rem 0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <div>
                           <span style={{ fontSize: '0.72rem', color: '#475569', display: 'block', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Monthly Rate</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0284c7' }}>₹{m.monthlyPrice}</span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0284c7' }}>₹{m.monthlyPrice}</span>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>/mo</span>
                         </div>
-                        <div style={{ borderLeft: '1.5px solid #cbd5e1', paddingLeft: '1rem' }}>
+                        <div style={{ borderLeft: '1.5px solid #cbd5e1', paddingLeft: '0.85rem' }}>
                           <span style={{ fontSize: '0.72rem', color: '#166534', display: 'block', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Annual Rate</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#059669' }}>₹{m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#059669' }}>₹{m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>/mo</span>
                         </div>
                       </div>

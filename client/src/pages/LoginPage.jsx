@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { loginUser, registerUser } from '../services/api';
-import { Dumbbell, Lock, Mail, ArrowRight, User, Sparkles } from 'lucide-react';
+import { Dumbbell, Lock, Mail, ArrowRight, User, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage({ setActivePage }) {
   const { user, loginSession, showToast } = useApp();
   const [mode, setMode] = useState('login'); // 'login' or 'register'
   const [loading, setLoading] = useState(false);
+
+  // Password visibility state
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // Account & Domain Selection state
   const [accountRole, setAccountRole] = useState('user'); // 'user' or 'admin'
@@ -177,16 +181,37 @@ export default function LoginPage({ setActivePage }) {
 
               <div>
                 <label style={labelStyle}>Password *</label>
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <Lock size={17} color="var(--text-muted)" style={iconStyle} />
                   <input
-                    type="password"
+                    type={showLoginPassword ? "text" : "password"}
                     required
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    style={inputStyle}
+                    style={{ ...inputStyle, paddingRight: '2.5rem' }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    title={showLoginPassword ? "Hide Password" : "Show Password"}
+                    style={{
+                      position: 'absolute',
+                      right: '0.85rem',
+                      background: 'none',
+                      border: 'none',
+                      color: showLoginPassword ? '#0284c7' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.2rem',
+                      borderRadius: '6px',
+                      transition: 'color 0.2s ease'
+                    }}
+                  >
+                    {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
@@ -288,14 +313,38 @@ export default function LoginPage({ setActivePage }) {
 
               <div>
                 <label style={labelStyle}>Password *</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Minimum 6 characters"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  style={{ ...inputStyle, paddingLeft: '1rem' }}
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Lock size={17} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem' }} />
+                  <input
+                    type={showRegPassword ? "text" : "password"}
+                    required
+                    placeholder="Minimum 6 characters"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    style={{ ...inputStyle, paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    title={showRegPassword ? "Hide Password" : "Show Password"}
+                    style={{
+                      position: 'absolute',
+                      right: '0.85rem',
+                      background: 'none',
+                      border: 'none',
+                      color: showRegPassword ? '#0284c7' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.2rem',
+                      borderRadius: '6px',
+                      transition: 'color 0.2s ease'
+                    }}
+                  >
+                    {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Flame, CheckCircle, Calendar, Clock, User, ShieldCheck, MapPin } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { submitTrialPassRequest } from '../../services/api';
+import { submitTrialPassRequest, fetchAdminTrainers } from '../../services/api';
 
 export function DayPassModal() {
   const { isDayPassOpen, closeDayPass, showToast } = useApp();
@@ -139,13 +139,25 @@ export function ClassReservationModal({ setActivePage }) {
     const d = new Date(Date.now() + 86400000 * 2);
     return d.toISOString().split('T')[0];
   });
+  const [trainers, setTrainers] = React.useState([]);
+  const [selectedTrainer, setSelectedTrainer] = React.useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    fetchAdminTrainers()
+      .then(res => {
+        if (res && res.success && res.trainers) {
+          setTrainers(res.trainers);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   if (!selectedClass) return null;
 
   const handleBook = async () => {
     setSubmitting(true);
-    const res = await bookClassHandler(selectedClass.id, preferredDate);
+    const res = await bookClassHandler(selectedClass.id, preferredDate, selectedTrainer);
     setSubmitting(false);
     if (res.success) {
       closeClassModal();
@@ -194,16 +206,36 @@ export function ClassReservationModal({ setActivePage }) {
           </div>
         </div>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-            Select Reservation Date *
-          </label>
-          <input
-            type="date"
-            value={preferredDate}
-            onChange={(e) => setPreferredDate(e.target.value)}
-            style={inputStyle}
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+              Select Reservation Date *
+            </label>
+            <input
+              type="date"
+              value={preferredDate}
+              onChange={(e) => setPreferredDate(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#0284c7', marginBottom: '0.4rem' }}>
+              Choose Personal Trainer (Optional)
+            </label>
+            <select
+              value={selectedTrainer}
+              onChange={(e) => setSelectedTrainer(e.target.value)}
+              style={{ ...inputStyle, background: '#ffffff', border: '1.5px solid #0284c7', color: '#0f172a', fontWeight: 700 }}
+            >
+              <option value="">-- Lead Coach: {selectedClass.trainer} --</option>
+              {trainers.map((t) => (
+                <option key={t.id} value={t.fullName}>
+                  {t.fullName} ({t.specialization})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {!user && (

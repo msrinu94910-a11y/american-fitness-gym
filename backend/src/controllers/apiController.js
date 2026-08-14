@@ -8,6 +8,10 @@ const Attendance = require('../models/Attendance');
 const Lead = require('../models/Lead');
 const CMSContent = require('../models/CMSContent');
 const Notification = require('../models/Notification');
+const Trainer = require('../models/Trainer');
+const WorkoutPlan = require('../models/WorkoutPlan');
+const DietPlan = require('../models/DietPlan');
+const MemberProgress = require('../models/MemberProgress');
 const store = require('../data/store');
 const cmsDefaultData = require('../data/cms.json');
 
@@ -88,7 +92,7 @@ const registerUser = async (req, res) => {
 // Auth: Login User
 const loginUser = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -100,6 +104,9 @@ const loginUser = async (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
     const namePart = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim();
 
+    // Check Trainer collection first
+    const trainerAccount = await Trainer.findOne({ email: cleanEmail });
+
     let user = await User.findOne({
       $or: [
         { email: cleanEmail },
@@ -107,23 +114,29 @@ const loginUser = async (req, res) => {
       ]
     });
 
+    // Detect actual role automatically from DB or email signature
+    let detectedRole = 'user';
+    if (trainerAccount || cleanEmail.includes('trainer') || (user && user.role === 'trainer')) {
+      detectedRole = 'trainer';
+    } else if (cleanEmail.includes('admin') || (user && user.role === 'admin')) {
+      detectedRole = 'admin';
+    }
+
     if (!user) {
-      // Auto provision account in MongoDB
-      const isAdmin = cleanEmail.includes('admin') || role === 'admin';
       const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
       const memNum = Math.floor(100000 + Math.random() * 900000);
       const code = `AFG-${memNum}`;
 
       user = await User.create({
         id: 'usr_' + Date.now(),
-        fullName: formattedName || 'Gym Member',
+        fullName: trainerAccount ? trainerAccount.fullName : (formattedName || 'Gym Member'),
         email: cleanEmail,
         password: password,
-        phone: '(555) 000-0000',
-        membershipPlan: isAdmin ? 'Staff Admin' : 'Pro Athlete VIP',
+        phone: trainerAccount ? trainerAccount.phone : '(555) 000-0000',
+        membershipPlan: detectedRole === 'admin' ? 'Staff Admin' : detectedRole === 'trainer' ? 'Master Trainer' : 'Pro Athlete VIP',
         membershipId: code,
         qrCode: code,
-        role: isAdmin ? 'admin' : 'user',
+        role: detectedRole,
         status: 'ACTIVE_MEMBER',
         joinedDate: new Date().toISOString().split('T')[0],
         expiryDate: '2027-12-31',
@@ -135,6 +148,7 @@ const loginUser = async (req, res) => {
       });
     } else {
       user.password = password;
+      user.role = detectedRole;
       if (!user.membershipId) {
         const memNum = Math.floor(100000 + Math.random() * 900000);
         user.membershipId = user.qrCode || `AFG-${memNum}`;
@@ -145,15 +159,13 @@ const loginUser = async (req, res) => {
 
     const userObj = user.toObject();
     delete userObj.password;
-
-    const effectiveRole = role === 'admin' || user.role === 'admin' || cleanEmail.includes('admin') ? 'admin' : 'user';
-    userObj.role = effectiveRole;
+    userObj.role = detectedRole;
 
     const token = 'afg_token_' + Buffer.from(cleanEmail).toString('base64') + '_' + Date.now();
 
     res.json({
       success: true,
-      message: `Welcome back, ${user.fullName} (${effectiveRole === 'admin' ? 'Admin Officer' : 'User Member'})!`,
+      message: `Welcome back, ${user.fullName} (${detectedRole === 'admin' ? 'Admin Officer' : detectedRole === 'trainer' ? 'Personal Trainer' : 'Gym Member'})!`,
       token,
       user: userObj
     });
@@ -806,21 +818,43 @@ const verifyQR = async (req, res) => {
     const nowTime = new Date().getTime();
     const daysRemaining = Math.max(1, Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24)));
 
-    const attendanceRecord = await Attendance.create({
+    const now = new Date();
+    const todayDateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let attendanceRecord = {
       id: 'att_' + Date.now(),
+      userId: foundUser.id,
       memberName,
       email,
-      checkInTime: new Date().toISOString(),
+      membershipId: memberId,
+      membershipPlan: plan,
+      photo: foundUser.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+      checkInTime: now.toISOString(),
+      date: todayDateStr,
+      time: timeStr,
       zone: 'Mobile Camera Gate 1',
+      gate: 'Gate 1 - Camera Scanner',
+      scannedBy: 'Admin Verification Officer',
       method: 'Digital QR Verification',
       status: 'GRANTED_ENTRY'
-    });
+    };
+
+    try {
+      const created = await Attendance.create(attendanceRecord);
+      if (created) attendanceRecord = created.toObject();
+    } catch (dbErr) {
+      console.warn('MongoDB Attendance log fallback to store:', dbErr.message);
+    }
+
+    if (!store.attendanceLogs) store.attendanceLogs = [];
+    store.attendanceLogs.unshift(attendanceRecord);
 
     res.json({
       success: true,
       hasSubscription: true,
       status: 'ACTIVE',
-      message: `ACTIVE MEMBERSHIP CONFIRMED ✅ Welcome, ${memberName}! Attendance entry logged in MongoDB Atlas.`,
+      message: `ACTIVE MEMBERSHIP CONFIRMED ✅ Welcome, ${memberName}! Attendance entry logged.`,
       member: {
         id: foundUser.id,
         fullName: memberName,
@@ -832,7 +866,7 @@ const verifyQR = async (req, res) => {
         status: 'ACTIVE',
         hasActiveSubscription: true,
         joinedDate: foundUser.joinedDate || '2026-01-01',
-        photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
+        photo: foundUser.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
       },
       attendance: attendanceRecord
     });
@@ -841,17 +875,208 @@ const verifyQR = async (req, res) => {
   }
 };
 
-// GET Admin Attendance Logs Audit Trail
+// GET Admin Attendance Logs Audit Trail with Search & Filter
 const getAttendanceLogs = async (req, res) => {
   try {
-    const logs = await Attendance.find().sort({ createdAt: -1 }).lean();
+    const { search = '', status = 'all', dateRange = 'all' } = req.query;
+
+    const todayIso = new Date().toISOString().split('T')[0];
+    const todayLocal = new Date().toLocaleDateString('en-CA');
+
+    try {
+      await Attendance.deleteMany({
+        $or: [
+          { email: 'member@americanfitness.com' },
+          { memberName: { $in: ['Alex Morgan', 'Samantha Reed', 'David Vance', 'Michael Chen', 'Sophia Rossi', 'Daniel Kim'] } }
+        ]
+      });
+      await Attendance.updateMany({ date: { $exists: false } }, { $set: { date: todayIso } });
+    } catch (e) {}
+
+    let logs = [];
+    try {
+      logs = await Attendance.find({
+        email: { $ne: 'member@americanfitness.com' },
+        memberName: { $nin: ['Alex Morgan', 'Samantha Reed', 'David Vance', 'Michael Chen', 'Sophia Rossi', 'Daniel Kim'] }
+      }).sort({ createdAt: -1 }).lean();
+    } catch (e) {}
+
+    // Guarantee zero demo seed logs
+    logs = (logs || []).filter(item => 
+      item.email !== 'member@americanfitness.com' &&
+      !['Alex Morgan', 'Samantha Reed', 'David Vance', 'Michael Chen', 'Sophia Rossi', 'Daniel Kim'].includes(item.memberName) &&
+      !item.id?.startsWith('att_seed_')
+    ).map(item => ({
+      ...item,
+      date: item.date || todayIso
+    }));
+
+    let filtered = logs.filter(item => {
+      // Search filter
+      if (search) {
+        const q = search.toLowerCase();
+        const mName = (item.memberName || '').toLowerCase();
+        const mId = (item.membershipId || item.userId || '').toLowerCase();
+        const mEmail = (item.email || '').toLowerCase();
+        if (!mName.includes(q) && !mId.includes(q) && !mEmail.includes(q)) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (status !== 'all') {
+        const st = (item.status || '').toUpperCase();
+        if (status === 'GRANTED' && !st.includes('GRANTED') && !st.includes('ACTIVE')) return false;
+        if (status === 'MANUAL' && !st.includes('MANUAL')) return false;
+        if (status === 'DENIED' && !st.includes('DENIED') && !st.includes('EXPIRED')) return false;
+      }
+
+      // Date Range filter
+      if (dateRange === 'today') {
+        const itemDate = String(item.date || todayIso);
+        if (!itemDate.includes(todayIso) && !itemDate.includes(todayLocal) && itemDate !== todayIso) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
     res.json({
       success: true,
-      count: logs.length,
-      data: logs
+      count: filtered.length,
+      data: filtered
     });
   } catch (err) {
-    res.json({ success: true, count: 0, data: [] });
+    res.json({ success: true, count: (store.attendanceLogs || []).length, data: store.attendanceLogs || [] });
+  }
+};
+
+// POST Admin Manual Attendance Check-in Entry
+const createManualAttendance = async (req, res) => {
+  try {
+    const { memberId, zone = 'Main Turnstile Gate A', notes = '' } = req.body;
+
+    let targetMember = null;
+    try {
+      targetMember = await User.findOne({
+        $or: [{ id: memberId }, { membershipId: memberId }, { email: memberId }]
+      }).lean();
+    } catch (e) {}
+
+    if (!targetMember && store.users) {
+      targetMember = store.users.find(u => u.id === memberId || u.membershipId === memberId || u.email === memberId);
+    }
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const memberName = targetMember ? targetMember.fullName : (req.body.memberName || 'Walk-in Member');
+    const membershipId = targetMember ? (targetMember.membershipId || targetMember.id) : (req.body.membershipId || 'AFG-MANUAL');
+    const membershipPlan = targetMember ? (targetMember.membershipPlan || 'Day Pass') : (req.body.membershipPlan || 'Walk-in Access');
+    const email = targetMember ? (targetMember.email || '') : 'member@americanfitness.com';
+
+    let record = {
+      id: 'att_man_' + Date.now(),
+      userId: targetMember ? targetMember.id : ('usr_' + Date.now()),
+      memberName,
+      email,
+      membershipId,
+      membershipPlan,
+      photo: targetMember ? targetMember.photo : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+      checkInTime: now.toISOString(),
+      date: todayStr,
+      time: timeStr,
+      zone,
+      gate: zone,
+      scannedBy: 'Admin Desk Verification',
+      method: 'Manual Admin Check-In',
+      status: 'MANUAL_ENTRY',
+      notes
+    };
+
+    try {
+      const created = await Attendance.create(record);
+      if (created) record = created.toObject();
+    } catch (e) {}
+
+    if (!store.attendanceLogs) store.attendanceLogs = [];
+    store.attendanceLogs.unshift(record);
+
+    res.json({
+      success: true,
+      message: `Manual check-in recorded for ${memberName}!`,
+      data: record
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DELETE Admin Attendance Log Entry
+const deleteAttendanceLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Missing record ID' });
+    }
+
+    try {
+      const deleteConditions = [{ id: String(id) }];
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        deleteConditions.push({ _id: new mongoose.Types.ObjectId(id) });
+        deleteConditions.push({ _id: String(id) });
+      }
+      await Attendance.deleteMany({ $or: deleteConditions });
+    } catch (e) {
+      console.warn('MongoDB attendance delete warning:', e);
+    }
+
+    if (store.attendanceLogs) {
+      store.attendanceLogs = store.attendanceLogs.filter(
+        a => String(a.id) !== String(id) && String(a._id) !== String(id)
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Attendance record deleted successfully'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET User Personal Attendance History
+const getUserAttendance = async (req, res) => {
+  try {
+    const userId = req.user ? req.user.id : req.query.userId;
+    const userEmail = req.user ? req.user.email : req.query.email;
+
+    let userLogs = [];
+    try {
+      userLogs = await Attendance.find({
+        $or: [
+          { userId: userId },
+          { email: userEmail }
+        ]
+      }).sort({ createdAt: -1 }).lean();
+    } catch (e) {}
+
+    if (!userLogs || userLogs.length === 0) {
+      userLogs = (store.attendanceLogs || []).filter(a =>
+        a.userId === userId || a.email === userEmail || a.membershipId === req.user?.membershipId
+      );
+    }
+
+    res.json({
+      success: true,
+      count: userLogs.length,
+      data: userLogs
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -870,12 +1095,26 @@ const getAdminAnalytics = async (req, res) => {
     const activeCount = activeUsers.length;
     const expiredCount = allUsers.length - activeCount;
 
+    const todayStr = now.toISOString().split('T')[0];
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const todayCheckIns = await Attendance.countDocuments({
-      createdAt: { $gte: startOfDay }
-    });
+    let todayCheckIns = 0;
+    try {
+      todayCheckIns = await Attendance.countDocuments({
+        $or: [
+          { createdAt: { $gte: startOfDay } },
+          { date: todayStr }
+        ]
+      });
+    } catch (e) {}
+
+    if (!todayCheckIns && store.attendanceLogs) {
+      todayCheckIns = store.attendanceLogs.filter(a => a.date === todayStr || (a.createdAt && new Date(a.createdAt).toISOString().split('T')[0] === todayStr)).length;
+    }
+    if (!todayCheckIns && store.attendanceLogs) {
+      todayCheckIns = store.attendanceLogs.length;
+    }
 
     const monthlyRevenue = activeUsers.reduce((sum, u) => {
       const plan = (u.membershipPlan || '').toLowerCase();
@@ -1214,6 +1453,704 @@ const sendExpiryNotice = async (req, res) => {
 };
 
 
+// ==================== TRAINER MANAGEMENT SYSTEM CONTROLLERS ==================== //
+
+// Seed Default Trainers if DB empty or missing trainers
+const SEED_TRAINERS = [
+  {
+    id: 'trn_marcus_vance',
+    userId: 'usr_trainer_marcus',
+    fullName: 'Marcus Vance',
+    email: 'trainer.marcus@americanfitness.com',
+    phone: '(555) 389-2041',
+    specialization: 'Hypertrophy & Powerlifting',
+    experienceYears: 7,
+    bio: 'Former IFBB competitor and Master Strength Coach specializing in body composition transformation.',
+    profileImage: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=400&q=80',
+    status: 'active',
+    assignedMembers: []
+  },
+  {
+    id: 'trn_elena_rostova',
+    userId: 'usr_trainer_elena',
+    fullName: 'Elena Rostova',
+    email: 'trainer.elena@americanfitness.com',
+    phone: '(555) 812-9034',
+    specialization: 'HYROX & High-Intensity Conditioning',
+    experienceYears: 5,
+    bio: 'Elite endurance specialist & functional mobility coach certified in Olympic weightlifting.',
+    profileImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&q=80',
+    status: 'active',
+    assignedMembers: []
+  },
+  {
+    id: 'trn_david_kim',
+    userId: 'usr_trainer_david',
+    fullName: 'David Kim',
+    email: 'trainer.david@americanfitness.com',
+    phone: '(555) 492-1180',
+    specialization: 'Olympic Weightlifting & Functional Mobility',
+    experienceYears: 6,
+    bio: 'USA Weightlifting Level 2 Coach specializing in snatch & clean-and-jerk technical mastery.',
+    profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80',
+    status: 'active',
+    assignedMembers: []
+  },
+  {
+    id: 'trn_sarah_jenkins',
+    userId: 'usr_trainer_sarah',
+    fullName: 'Sarah Jenkins',
+    email: 'trainer.sarah@americanfitness.com',
+    phone: '(555) 773-9012',
+    specialization: 'Functional Strength & Tactical Boxing',
+    experienceYears: 8,
+    bio: 'Golden Gloves boxer & functional strength specialist training high-performance athletes.',
+    profileImage: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=400&q=80',
+    status: 'active',
+    assignedMembers: []
+  },
+  {
+    id: 'trn_viktor_nikitin',
+    userId: 'usr_trainer_viktor',
+    fullName: 'Viktor Nikitin',
+    email: 'trainer.viktor@americanfitness.com',
+    phone: '(555) 604-3321',
+    specialization: 'Bodybuilding & Contest Prep',
+    experienceYears: 10,
+    bio: 'Pro Natural Bodybuilder and posing coach with over a decade of elite contest preparation coaching.',
+    profileImage: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&q=80',
+    status: 'active',
+    assignedMembers: []
+  },
+  {
+    id: 'trn_maya_lin',
+    userId: 'usr_trainer_maya',
+    fullName: 'Maya Lin',
+    email: 'trainer.maya@americanfitness.com',
+    phone: '(555) 918-2049',
+    specialization: 'Pilates, Yoga & Athletic Rehabilitation',
+    experienceYears: 6,
+    bio: 'Certified Movement Specialist focusing on spinal alignment, mobility, and injury recovery.',
+    profileImage: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400&q=80',
+    status: 'active',
+    assignedMembers: []
+  }
+];
+
+// GET Admin All Trainers
+const getAdminTrainers = async (req, res) => {
+  try {
+    // Seed any missing default trainers so all 6 master trainers are available
+    for (const tSeed of SEED_TRAINERS) {
+      const existing = await Trainer.findOne({ $or: [{ id: tSeed.id }, { email: tSeed.email.toLowerCase() }] });
+      if (!existing) {
+        await Trainer.create(tSeed);
+        let trUser = await User.findOne({ email: tSeed.email.toLowerCase() });
+        if (!trUser) {
+          await User.create({
+            id: tSeed.userId,
+            fullName: tSeed.fullName,
+            email: tSeed.email,
+            password: 'password123',
+            phone: tSeed.phone,
+            role: 'trainer',
+            membershipPlan: 'Elite Master Trainer',
+            status: 'ACTIVE_MEMBER'
+          });
+        }
+      }
+    }
+
+    const trainers = await Trainer.find().lean();
+
+    // Attach count of assigned users
+    const trainerList = await Promise.all(trainers.map(async (t) => {
+      const assignedUsersCount = await User.countDocuments({
+        $or: [
+          { assignedTrainerId: t.id },
+          ...(t._id ? [{ assignedTrainerId: t._id.toString() }] : [])
+        ]
+      });
+      return {
+        ...t,
+        assignedCount: Math.max(t.assignedMembers?.length || 0, assignedUsersCount)
+      };
+    }));
+
+    res.json({
+      success: true,
+      trainers: trainerList
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// CREATE Admin Trainer
+const createAdminTrainer = async (req, res) => {
+  try {
+    const { fullName, email, password, phone, specialization, experienceYears, bio, profileImage } = req.body;
+
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Full name, email, and password are required.' });
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User or Trainer with this email already exists.' });
+    }
+
+    const userId = 'usr_trn_' + Date.now();
+    const trainerId = 'trn_' + Date.now();
+
+    // Create User Account with role 'trainer'
+    await User.create({
+      id: userId,
+      fullName,
+      email: email.toLowerCase(),
+      password: password || 'password123',
+      phone: phone || '(555) 000-0000',
+      role: 'trainer',
+      membershipPlan: 'Elite Master Trainer',
+      status: 'ACTIVE_MEMBER'
+    });
+
+    // Create Trainer Profile Document
+    const newTrainer = await Trainer.create({
+      id: trainerId,
+      userId,
+      fullName,
+      email: email.toLowerCase(),
+      phone: phone || '(555) 000-0000',
+      specialization: specialization || 'General Strength & Fitness',
+      experienceYears: Number(experienceYears) || 3,
+      bio: bio || 'Certified American Fitness Gym Personal Trainer.',
+      profileImage: profileImage || 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=400&q=80',
+      status: 'active',
+      assignedMembers: []
+    });
+
+    res.json({
+      success: true,
+      message: `Trainer ${fullName} created successfully!`,
+      trainer: newTrainer
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// UPDATE Admin Trainer
+const updateAdminTrainer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, phone, specialization, experienceYears, bio, profileImage, status } = req.body;
+
+    const trainer = await Trainer.findOne({ $or: [{ id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }] });
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: 'Trainer not found.' });
+    }
+
+    if (fullName) trainer.fullName = fullName;
+    if (phone) trainer.phone = phone;
+    if (specialization) trainer.specialization = specialization;
+    if (experienceYears !== undefined) trainer.experienceYears = Number(experienceYears);
+    if (bio) trainer.bio = bio;
+    if (profileImage) trainer.profileImage = profileImage;
+    if (status) trainer.status = status;
+
+    await trainer.save();
+
+    // Also update matching User account
+    await User.updateOne({ email: trainer.email }, { $set: { fullName: trainer.fullName, phone: trainer.phone } });
+
+    res.json({
+      success: true,
+      message: `Trainer ${trainer.fullName} updated successfully!`,
+      trainer
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// TOGGLE Admin Trainer Status
+const toggleTrainerStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const trainer = await Trainer.findOne({ $or: [{ id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }] });
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: 'Trainer not found.' });
+    }
+
+    trainer.status = trainer.status === 'active' ? 'inactive' : 'active';
+    await trainer.save();
+
+    res.json({
+      success: true,
+      message: `Trainer ${trainer.fullName} is now ${trainer.status.toUpperCase()}`,
+      status: trainer.status
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DELETE Admin Trainer
+const deleteAdminTrainer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const trainer = await Trainer.findOne({ $or: [{ id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }] });
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: 'Trainer not found.' });
+    }
+
+    await Trainer.deleteOne({ _id: trainer._id });
+    await User.deleteOne({ email: trainer.email });
+    await User.updateMany({ assignedTrainerId: trainer.id }, { $set: { assignedTrainerId: null } });
+
+    res.json({
+      success: true,
+      message: `Trainer ${trainer.fullName} permanently deleted.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ASSIGN Member to Trainer
+const assignMemberToTrainer = async (req, res) => {
+  try {
+    const { userId, trainerId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Member User ID is required.' });
+    }
+
+    const user = await User.findOne({
+      $or: [
+        { id: userId },
+        { email: userId.toLowerCase ? userId.toLowerCase() : userId },
+        ...(mongoose.Types.ObjectId.isValid(userId) ? [{ _id: userId }] : [])
+      ]
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Member user not found.' });
+    }
+
+    if (!trainerId || trainerId === 'none' || trainerId === null) {
+      user.assignedTrainerId = null;
+      await user.save();
+      await Trainer.updateMany({}, { $pull: { assignedMembers: user.id } });
+      return res.json({ success: true, message: `Unassigned trainer from ${user.fullName}.` });
+    }
+
+    const trainer = await Trainer.findOne({
+      $or: [
+        { id: trainerId },
+        { email: trainerId.toLowerCase ? trainerId.toLowerCase() : trainerId },
+        ...(mongoose.Types.ObjectId.isValid(trainerId) ? [{ _id: trainerId }] : [])
+      ]
+    });
+
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: 'Trainer not found.' });
+    }
+
+    // Set assignedTrainerId to trainer.id
+    user.assignedTrainerId = trainer.id;
+    await user.save();
+
+    // Sync across any duplicate user records by email or fullName
+    if (user.email) {
+      await User.updateMany(
+        { email: user.email.toLowerCase() },
+        { $set: { assignedTrainerId: trainer.id } }
+      );
+    }
+
+    // Add user.id and user.email to trainer's assignedMembers
+    await Trainer.updateMany({}, { $pull: { assignedMembers: user.id } });
+    if (!trainer.assignedMembers) trainer.assignedMembers = [];
+    if (!trainer.assignedMembers.includes(user.id)) trainer.assignedMembers.push(user.id);
+    if (user.email && !trainer.assignedMembers.includes(user.email)) trainer.assignedMembers.push(user.email);
+    await trainer.save();
+
+    res.json({
+      success: true,
+      message: `Assigned member ${user.fullName} to Trainer ${trainer.fullName}!`,
+      user: { id: user.id, fullName: user.fullName, assignedTrainerId: trainer.id }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET Trainer Assigned Members List (For Trainer Portal)
+const getTrainerAssignedMembers = async (req, res) => {
+  try {
+    const trainerUser = req.user;
+
+    // Find trainer by email or id
+    let trainer = await Trainer.findOne({
+      $or: [
+        { email: trainerUser.email ? trainerUser.email.toLowerCase() : '' },
+        { userId: trainerUser.id },
+        { id: trainerUser.id }
+      ]
+    });
+
+    if (!trainer) {
+      trainer = await Trainer.findOne({ status: 'active' });
+    }
+
+    if (!trainer) {
+      return res.json({ success: true, trainer: null, members: [] });
+    }
+
+    // Collect ALL identifiers associated with this trainer
+    const trainerIds = [trainer.id];
+    if (trainer._id) trainerIds.push(trainer._id.toString());
+    if (trainer.userId) trainerIds.push(trainer.userId);
+    if (trainer.email) trainerIds.push(trainer.email, trainer.email.toLowerCase());
+
+    const assignedMembersInTrainerDoc = (trainer.assignedMembers || []).map(id => id.toString());
+
+    // Query ONLY REAL USERS (excluding trainers & admins) who match this trainer's assigned ID or are in assignedMembers array
+    const members = await User.find({
+      role: { $nin: ['admin', 'trainer'] },
+      email: { $not: /trainer|admin/i },
+      $or: [
+        { assignedTrainerId: { $in: trainerIds } },
+        ...(assignedMembersInTrainerDoc.length > 0 ? [
+          { id: { $in: assignedMembersInTrainerDoc } },
+          { email: { $in: assignedMembersInTrainerDoc } },
+          { _id: { $in: assignedMembersInTrainerDoc.filter(id => mongoose.Types.ObjectId.isValid(id)) } }
+        ] : [])
+      ]
+    }).lean();
+
+    const formattedMembers = members.map(m => ({
+      id: m.id || m._id.toString(),
+      fullName: m.fullName,
+      email: m.email,
+      phone: m.phone || '(555) 000-0000',
+      membershipPlan: m.membershipPlan || 'Pro Athlete VIP',
+      status: m.status === 'EXPIRED' ? 'EXPIRED' : 'ACTIVE',
+      fitnessGoal: m.fitnessGoal || 'General Health & Fitness',
+      joinedDate: m.joinedDate || '2026-01-15',
+      assignedTrainerId: m.assignedTrainerId
+    }));
+
+    res.json({
+      success: true,
+      trainer: trainer,
+      members: formattedMembers
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// WORKOUT PLAN: Create or Update
+const createOrUpdateWorkoutPlan = async (req, res) => {
+  try {
+    const { userId, title, goal, exercises } = req.body;
+    const trainerId = req.user?.id || 'trn_admin';
+
+    if (!userId || !exercises) {
+      return res.status(400).json({ success: false, message: 'User ID and exercises schedule are required.' });
+    }
+
+    let plan = await WorkoutPlan.findOne({ userId });
+    if (plan) {
+      plan.title = title || plan.title;
+      plan.goal = goal || plan.goal;
+      plan.exercises = exercises;
+      plan.updatedAt = new Date();
+      await plan.save();
+    } else {
+      plan = await WorkoutPlan.create({
+        id: 'wrk_' + Date.now(),
+        userId,
+        trainerId,
+        title: title || 'Personalized Athletic Workout Routine',
+        goal: goal || 'Hypertrophy & Strength',
+        exercises
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Workout Plan saved successfully!',
+      plan
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// WORKOUT PLAN: Get Member Workout Plan
+const getMemberWorkoutPlan = async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user?.id;
+    let plan = await WorkoutPlan.findOne({ userId }).lean();
+
+    if (!plan) {
+      // Default sample plan
+      plan = {
+        title: 'Custom Athletic Strength Blueprint',
+        goal: 'Hypertrophy & Performance',
+        startDate: new Date().toISOString().split('T')[0],
+        exercises: [
+          { day: 'Monday', name: 'Barbell Back Squats', sets: 4, reps: '8-10', restSeconds: 90, targetMuscle: 'Quads & Glutes', notes: 'Maintain parallel depth.' },
+          { day: 'Wednesday', name: 'Incline Dumbbell Bench Press', sets: 4, reps: '10-12', restSeconds: 75, targetMuscle: 'Upper Chest', notes: 'Squeeze at top.' },
+          { day: 'Friday', name: 'Overhead Barbell Military Press', sets: 4, reps: '8-10', restSeconds: 90, targetMuscle: 'Shoulders', notes: 'Engage core.' }
+        ]
+      };
+    }
+
+    res.json({
+      success: true,
+      plan
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DIET PLAN: Create or Update
+const createOrUpdateDietPlan = async (req, res) => {
+  try {
+    const { userId, title, dailyCalories, proteinGrams, carbsGrams, fatsGrams, waterLiters, meals } = req.body;
+    const trainerId = req.user?.id || 'trn_admin';
+
+    if (!userId || !meals) {
+      return res.status(400).json({ success: false, message: 'User ID and meal schedule are required.' });
+    }
+
+    let plan = await DietPlan.findOne({ userId });
+    if (plan) {
+      plan.title = title || plan.title;
+      plan.dailyCalories = Number(dailyCalories) || plan.dailyCalories;
+      plan.proteinGrams = Number(proteinGrams) || plan.proteinGrams;
+      plan.carbsGrams = Number(carbsGrams) || plan.carbsGrams;
+      plan.fatsGrams = Number(fatsGrams) || plan.fatsGrams;
+      plan.waterLiters = Number(waterLiters) || plan.waterLiters;
+      plan.meals = meals;
+      plan.updatedAt = new Date();
+      await plan.save();
+    } else {
+      plan = await DietPlan.create({
+        id: 'diet_' + Date.now(),
+        userId,
+        trainerId,
+        title: title || 'Lean Muscle Macro Blueprint',
+        dailyCalories: Number(dailyCalories) || 2400,
+        proteinGrams: Number(proteinGrams) || 180,
+        carbsGrams: Number(carbsGrams) || 220,
+        fatsGrams: Number(fatsGrams) || 65,
+        waterLiters: Number(waterLiters) || 3.5,
+        meals
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Diet Plan saved successfully!',
+      plan
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DIET PLAN: Get Member Diet Plan
+const getMemberDietPlan = async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user?.id;
+    let plan = await DietPlan.findOne({ userId }).lean();
+
+    if (!plan) {
+      // Default sample diet plan
+      plan = {
+        title: 'Lean Muscle Macro Blueprint',
+        dailyCalories: 2400,
+        proteinGrams: 180,
+        carbsGrams: 220,
+        fatsGrams: 65,
+        waterLiters: 3.5,
+        meals: [
+          { mealType: 'Breakfast', time: '07:30 AM', foodItems: '4 Whole Eggs, 1 Cup Oatmeal, Blueberries, Almonds', calories: 600, proteinGrams: 40, carbsGrams: 55, fatsGrams: 20, instructions: 'Hydrate with 500ml water first thing.' },
+          { mealType: 'Lunch', time: '01:00 PM', foodItems: '200g Grilled Chicken Breast, 1.5 Cups Brown Rice, Steamed Broccoli', calories: 650, proteinGrams: 55, carbsGrams: 65, fatsGrams: 12, instructions: 'Season with olive oil & sea salt.' },
+          { mealType: 'Pre-Workout Snack', time: '04:30 PM', foodItems: '1 Scoop Whey Protein, 1 Large Banana, 20g Peanut Butter', calories: 350, proteinGrams: 30, carbsGrams: 40, fatsGrams: 10, instructions: 'Consume 45 mins prior to workout.' },
+          { mealType: 'Dinner', time: '08:00 PM', foodItems: '200g Baked Salmon, Roasted Sweet Potatoes, Asparagus', calories: 700, proteinGrams: 50, carbsGrams: 50, fatsGrams: 22, instructions: 'High omega-3 recovery meal.' }
+        ]
+      };
+    }
+
+    res.json({
+      success: true,
+      plan
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PROGRESS: Log Progress Entry
+const logMemberProgress = async (req, res) => {
+  try {
+    const { userId, weightKg, bodyFatPercent, muscleMassKg, notes } = req.body;
+    const trainerId = req.user?.id || 'trn_admin';
+
+    if (!userId || !weightKg) {
+      return res.status(400).json({ success: false, message: 'Member ID and weight value are required.' });
+    }
+
+    const newProgress = await MemberProgress.create({
+      id: 'prg_' + Date.now(),
+      userId,
+      trainerId,
+      date: new Date().toISOString().split('T')[0],
+      weightKg: Number(weightKg),
+      bodyFatPercent: Number(bodyFatPercent) || 18,
+      muscleMassKg: Number(muscleMassKg) || 35,
+      notes: notes || 'Trainer progress entry'
+    });
+
+    res.json({
+      success: true,
+      message: 'Progress recorded successfully!',
+      progress: newProgress
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PROGRESS: Get Member Progress History
+const getMemberProgress = async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user?.id;
+    let history = await MemberProgress.find({ userId }).sort({ createdAt: 1 }).lean();
+
+    if (!history || history.length === 0) {
+      // Return initial seed history
+      history = [
+        { date: '2026-06-01', weightKg: 78.5, bodyFatPercent: 21.0, muscleMassKg: 33.2, notes: 'Initial assessment scan.' },
+        { date: '2026-07-01', weightKg: 76.8, bodyFatPercent: 19.5, muscleMassKg: 34.0, notes: 'Good strength improvements.' },
+        { date: '2026-08-01', weightKg: 75.2, bodyFatPercent: 18.2, muscleMassKg: 35.1, notes: 'Goal target reached for phase 1.' }
+      ];
+    }
+
+    res.json({
+      success: true,
+      history
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET Assigned Trainer Details (For Member Dashboard)
+const getAssignedTrainerDetails = async (req, res) => {
+  try {
+    const user = req.user;
+    let currentUser = await User.findOne({ $or: [{ email: user.email.toLowerCase() }, { id: user.id }] });
+    const assignedId = currentUser?.assignedTrainerId || user.assignedTrainerId;
+
+    let trainer = null;
+    if (assignedId) {
+      trainer = await Trainer.findOne({
+        $or: [
+          { id: assignedId },
+          { email: assignedId.toLowerCase() },
+          ...(mongoose.Types.ObjectId.isValid(assignedId) ? [{ _id: assignedId }] : [])
+        ]
+      }).lean();
+    }
+
+    if (!trainer) {
+      // Default to first active trainer
+      trainer = await Trainer.findOne({ status: 'active' }).lean();
+    }
+
+    if (!trainer) {
+      trainer = SEED_TRAINERS[0];
+    }
+
+    res.json({
+      success: true,
+      trainer
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Member Self-Select Personal Trainer
+const memberChooseTrainer = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { trainerId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
+    const user = await User.findOne({ $or: [{ id: userId }, { email: req.user.email.toLowerCase() }] });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Member profile not found.' });
+    }
+
+    if (!trainerId || trainerId === 'none') {
+      user.assignedTrainerId = null;
+      await user.save();
+      return res.json({ success: true, message: 'Trainer unassigned successfully.' });
+    }
+
+    const trainer = await Trainer.findOne({
+      $or: [
+        { id: trainerId },
+        { email: trainerId.toLowerCase ? trainerId.toLowerCase() : trainerId },
+        ...(mongoose.Types.ObjectId.isValid(trainerId) ? [{ _id: trainerId }] : [])
+      ]
+    });
+
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: 'Trainer not found.' });
+    }
+
+    user.assignedTrainerId = trainer.id;
+    await user.save();
+
+    // Sync across any user records by email
+    if (user.email) {
+      await User.updateMany(
+        { email: user.email.toLowerCase() },
+        { $set: { assignedTrainerId: trainer.id } }
+      );
+    }
+
+    // Update trainer assignedMembers
+    await Trainer.updateMany({}, { $pull: { assignedMembers: user.id } });
+    if (!trainer.assignedMembers) trainer.assignedMembers = [];
+    if (!trainer.assignedMembers.includes(user.id)) trainer.assignedMembers.push(user.id);
+    if (user.email && !trainer.assignedMembers.includes(user.email)) trainer.assignedMembers.push(user.email);
+    await trainer.save();
+
+    res.json({
+      success: true,
+      message: `Successfully assigned ${trainer.fullName} as your Personal Coach!`,
+      trainer
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getHealth,
   registerUser,
@@ -1232,6 +2169,9 @@ module.exports = {
   submitTrialPass,
   verifyQR,
   getAttendanceLogs,
+  createManualAttendance,
+  deleteAttendanceLog,
+  getUserAttendance,
   getAdminAnalytics,
   getAdminMembers,
   deleteAdminMember,
@@ -1245,5 +2185,21 @@ module.exports = {
   saveMembership,
   deleteMembership,
   subscribeEvents,
-  getUserNotifications
+  getUserNotifications,
+  // Trainer Management System Exports
+  getAdminTrainers,
+  createAdminTrainer,
+  updateAdminTrainer,
+  toggleTrainerStatus,
+  deleteAdminTrainer,
+  assignMemberToTrainer,
+  getTrainerAssignedMembers,
+  createOrUpdateWorkoutPlan,
+  getMemberWorkoutPlan,
+  createOrUpdateDietPlan,
+  getMemberDietPlan,
+  logMemberProgress,
+  getMemberProgress,
+  getAssignedTrainerDetails,
+  memberChooseTrainer
 };

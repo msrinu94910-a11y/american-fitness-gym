@@ -4,11 +4,13 @@ import {
   Camera, QrCode, ShieldCheck, XCircle, AlertTriangle, AlertCircle, CheckCircle2, 
   Clock, User, Search, Sparkles, RefreshCw, Volume2, VolumeX, 
   History, Smartphone, Lock, ArrowRight, ArrowLeft, LogOut, Zap, Check, Users, DollarSign, TrendingUp,
-  UserCheck, UserX, Calendar, Filter, Image as ImageIcon, Send, CheckCheck, MessageSquare, Trash2
+  UserCheck, UserX, Calendar, Filter, Image as ImageIcon, Send, CheckCheck, MessageSquare, Trash2, FileText, Download, Plus
 } from 'lucide-react';
 import { 
   verifyMemberQR, fetchAttendanceLogs, fetchAdminAnalytics, 
-  fetchAdminMembers, renewMemberSubscription, generateMemberQRToken, sendExpiryNotice, deleteAdminMember 
+  fetchAdminMembers, renewMemberSubscription, generateMemberQRToken, sendExpiryNotice, deleteAdminMember,
+  recordManualAttendance, deleteAttendanceLog,
+  fetchAdminTrainers, createAdminTrainer, updateAdminTrainer, toggleTrainerStatus, deleteAdminTrainer, assignMemberToTrainer
 } from '../services/api';
 import { useApp } from '../context/AppContext';
 import QRCodeSVG from '../components/common/QRCodeSVG';
@@ -18,8 +20,19 @@ export default function MobileScannerPage({ setActivePage }) {
     user, setUser, showToast, cmsData, updateHomepageCMS, 
     saveServiceCMS, deleteServiceCMS, saveMembershipCMS, deleteMembershipCMS, logoutSession 
   } = useApp();
-  const [activeAdminTab, setActiveAdminTab] = useState('dashboard'); // 'dashboard' | 'scanner' | 'members' | 'attendance' | 'cms'
+  const [activeAdminTab, setActiveAdminTab] = useState('dashboard'); // 'dashboard' | 'scanner' | 'members' | 'trainers' | 'attendance' | 'cms'
   const [cmsSubTab, setCmsSubTab] = useState('homepage'); // 'homepage' | 'services' | 'memberships'
+
+  // Trainer Management State
+  const [trainersList, setTrainersList] = useState([]);
+  const [trainerModalOpen, setTrainerModalOpen] = useState(false);
+  const [editingTrainer, setEditingTrainer] = useState(null);
+  const [trainerForm, setTrainerForm] = useState({
+    fullName: '', email: '', password: 'password123', phone: '', specialization: 'Bodybuilding & Strength', experienceYears: 5, bio: '', profileImage: ''
+  });
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedMemberForAssign, setSelectedMemberForAssign] = useState(null);
+  const [selectedTrainerIdForAssign, setSelectedTrainerIdForAssign] = useState('');
 
   // Homepage Form State
   const [hpForm, setHpForm] = useState({
@@ -76,6 +89,20 @@ export default function MobileScannerPage({ setActivePage }) {
   const [userDashboardPreviewModal, setUserDashboardPreviewModal] = useState(null);
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
 
+  // Attendance Hub Management State
+  const [attendanceSearch, setAttendanceSearch] = useState('');
+  const [attendanceFilter, setAttendanceFilter] = useState('all'); // 'all' | 'GRANTED' | 'MANUAL' | 'DENIED'
+  const [attendanceDateRange, setAttendanceDateRange] = useState('all'); // 'all' | 'today'
+  const [showManualCheckinModal, setShowManualCheckinModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshToast, setRefreshToast] = useState(null);
+  const [manualForm, setManualForm] = useState({
+    memberId: '',
+    zone: 'Main Turnstile Gate A',
+    notes: ''
+  });
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
@@ -104,17 +131,95 @@ export default function MobileScannerPage({ setActivePage }) {
   // Load existing attendance log and analytics on mount
   const loadDashboardData = async () => {
     try {
-      const [attRes, analyticsRes, membersRes] = await Promise.all([
-        fetchAttendanceLogs(),
+      const [attRes, analyticsRes, membersRes, trainersRes] = await Promise.all([
+        fetchAttendanceLogs(attendanceFilter, attendanceSearch, attendanceDateRange),
         fetchAdminAnalytics(),
-        fetchAdminMembers(memberFilter, memberSearch)
+        fetchAdminMembers(memberFilter, memberSearch),
+        fetchAdminTrainers()
       ]);
 
       if (attRes.success && attRes.data) setLogs(attRes.data);
       if (analyticsRes.success && analyticsRes.analytics) setAnalytics(analyticsRes.analytics);
       if (membersRes.success && membersRes.members) setMembersList(membersRes.members);
+      if (trainersRes.success && trainersRes.trainers) setTrainersList(trainersRes.trainers);
     } catch (err) {
       console.error('Failed to load admin dashboard data:', err);
+    }
+  };
+
+  const handleSaveTrainer = async () => {
+    if (!trainerForm.fullName || !trainerForm.email) {
+      showToast('Full name and email are required for trainer profile', 'warning');
+      return;
+    }
+    try {
+      let res;
+      if (editingTrainer) {
+        res = await updateAdminTrainer(editingTrainer.id, trainerForm);
+      } else {
+        res = await createAdminTrainer(trainerForm);
+      }
+      if (res.success) {
+        showToast(res.message || 'Trainer profile saved successfully!', 'success');
+        setTrainerModalOpen(false);
+        setEditingTrainer(null);
+        loadDashboardData();
+      } else {
+        showToast(res.message || 'Failed to save trainer', 'error');
+      }
+    } catch (err) {
+      showToast('Error saving trainer details', 'error');
+    }
+  };
+
+  const handleToggleTrainerStatus = async (trainerId) => {
+    try {
+      const res = await toggleTrainerStatus(trainerId);
+      if (res.success) {
+        showToast(res.message, 'success');
+        loadDashboardData();
+      }
+    } catch (err) {}
+  };
+
+  const handleDeleteTrainer = async (trainerId, trainerName) => {
+    if (!window.confirm(`Are you sure you want to permanently delete Trainer ${trainerName}?`)) return;
+    try {
+      const res = await deleteAdminTrainer(trainerId);
+      if (res.success) {
+        showToast(res.message, 'info');
+        loadDashboardData();
+      }
+    } catch (err) {}
+  };
+
+  const handleConfirmAssignTrainer = async () => {
+    if (!selectedMemberForAssign) return;
+    try {
+      const res = await assignMemberToTrainer(selectedMemberForAssign.id, selectedTrainerIdForAssign);
+      if (res.success) {
+        showToast(res.message, 'success');
+        setAssignModalOpen(false);
+        setSelectedMemberForAssign(null);
+        loadDashboardData();
+      } else {
+        showToast(res.message || 'Failed to assign trainer', 'error');
+      }
+    } catch (err) {
+      showToast('Error assigning trainer', 'error');
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadDashboardData();
+      setRefreshToast('Attendance logs & metrics successfully refreshed!');
+      setTimeout(() => setRefreshToast(null), 3000);
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
@@ -122,7 +227,91 @@ export default function MobileScannerPage({ setActivePage }) {
     loadDashboardData();
     // Auto-activate camera scanner when admin opens dashboard
     startCamera();
-  }, [memberFilter, memberSearch]);
+  }, [memberFilter, memberSearch, attendanceFilter, attendanceSearch, attendanceDateRange]);
+
+  // Attendance Handlers
+  const handleManualCheckinSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!manualForm.memberId) {
+      showToast('Please select or enter a Member ID/Name', 'warning');
+      return;
+    }
+    setIsSubmittingManual(true);
+    try {
+      const selectedMember = (membersList || []).find(m => m.id === manualForm.memberId || m.membershipId === manualForm.memberId);
+      const res = await recordManualAttendance({
+        memberId: manualForm.memberId,
+        memberName: selectedMember ? selectedMember.fullName : manualForm.memberId,
+        membershipId: selectedMember ? selectedMember.membershipId : manualForm.memberId,
+        membershipPlan: selectedMember ? selectedMember.membershipPlan : 'Pro Athlete VIP',
+        zone: manualForm.zone,
+        notes: manualForm.notes
+      });
+      setIsSubmittingManual(false);
+      if (res.success) {
+        showToast(res.message || 'Manual check-in recorded successfully!', 'success');
+        setShowManualCheckinModal(false);
+        setManualForm({ memberId: '', zone: 'Main Turnstile Gate A', notes: '' });
+        loadDashboardData();
+      } else {
+        showToast(res.message || 'Error recording manual check-in', 'error');
+      }
+    } catch (err) {
+      setIsSubmittingManual(false);
+      showToast('Failed to record manual check-in', 'error');
+    }
+  };
+
+  const handleDeleteAttendance = async (targetId) => {
+    if (!targetId) return;
+    const cleanId = String(targetId);
+
+    // Optimistically remove from UI state immediately
+    setLogs(prev => (prev || []).filter(l => String(l.id || l._id) !== cleanId && String(l.id) !== cleanId && String(l._id) !== cleanId));
+
+    try {
+      const res = await deleteAttendanceLog(cleanId);
+      if (res.success) {
+        showToast('Attendance log record deleted ✅', 'success');
+        loadDashboardData();
+      } else {
+        showToast(res.message || 'Error deleting attendance record', 'error');
+        loadDashboardData();
+      }
+    } catch (err) {
+      showToast('Error deleting attendance record', 'error');
+      loadDashboardData();
+    }
+  };
+
+  const handleExportAttendanceCSV = () => {
+    if (!logs || logs.length === 0) {
+      showToast('No attendance records available to export', 'warning');
+      return;
+    }
+    const headers = ['Date', 'Time', 'Member Name', 'Membership ID', 'Plan', 'Zone', 'Method', 'Status'];
+    const rows = logs.map(item => [
+      `"${item.date || ''}"`,
+      `"${item.time || ''}"`,
+      `"${(item.memberName || '').replace(/"/g, '""')}"`,
+      `"${item.membershipId || item.userId || ''}"`,
+      `"${item.membershipPlan || ''}"`,
+      `"${item.zone || item.gate || ''}"`,
+      `"${item.method || ''}"`,
+      `"${item.status || ''}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `AFG_Attendance_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Attendance audit report exported as CSV! 📥', 'success');
+  };
 
   // Image Upload QR Reader Handler
   // Multi-Engine QR Image File & Photo Snap Decoder
@@ -438,47 +627,68 @@ export default function MobileScannerPage({ setActivePage }) {
     }
   };
 
-   return (
-    <div className="admin-container">
-      {/* 1. Modern Left Sidebar Navigation (White Theme) */}
-      <aside className="admin-sidebar">
+  return (
+    <div className="admin-container" style={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: '#f8fafc',
+      width: '100%'
+    }}>
+      {/* 1. Full-Height Fixed Left Sidebar Navigation */}
+      <aside className="admin-sidebar" style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: '260px',
+        minWidth: '260px',
+        background: '#ffffff',
+        borderRight: '1.5px solid #e2e8f0',
+        padding: '1.5rem 1.25rem',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        zIndex: 100,
+        boxShadow: '4px 0 25px rgba(0, 0, 0, 0.03)'
+      }}>
         <div>
           {/* Sidebar Header Brand */}
-          <div className="admin-sidebar-header admin-sidebar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingLeft: '0.5rem' }}>
+          <div className="admin-sidebar-header admin-sidebar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingLeft: '0.25rem' }}>
             <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)',
               flexShrink: 0
             }}>
-              <QrCode size={20} color="#ffffff" />
+              <QrCode size={22} color="#ffffff" />
             </div>
             <div>
-              <h1 style={{ fontSize: '1rem', margin: 0, fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)', letterSpacing: '0.02em' }}>
+              <h1 style={{ fontSize: '0.98rem', margin: 0, fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)', letterSpacing: '0.02em' }}>
                 AMERICAN FITNESS
               </h1>
-              <div style={{ fontSize: '0.68rem', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.68rem', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 800 }}>
                 <ShieldCheck size={12} /> ADMIN PORTAL
               </div>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <div className="admin-nav-label" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', paddingLeft: '0.6rem' }}>
+          <div className="admin-nav-label" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
             MAIN MENU
           </div>
-          <nav className="admin-nav-list">
+          <nav className="admin-nav-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             {[
-              { id: 'dashboard', label: 'Overview', icon: ShieldCheck },
-              { id: 'scanner', label: 'QR Scanner', icon: QrCode },
-              { id: 'members', label: `Members (${membersList.length})`, icon: Users },
-              { id: 'attendance', label: 'Attendance', icon: Clock },
-              { id: 'cms', label: 'CMS Manager', icon: Sparkles }
+              { id: 'dashboard', label: 'Overview', icon: ShieldCheck, count: null },
+              { id: 'scanner', label: 'QR Scanner', icon: QrCode, count: null },
+              { id: 'members', label: 'Members', icon: Users, count: membersList.length },
+              { id: 'trainers', label: 'Trainers', icon: UserCheck, count: trainersList.length },
+              { id: 'attendance', label: 'Attendance', icon: Clock, count: null },
+              { id: 'cms', label: 'CMS Manager', icon: Sparkles, count: null }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeAdminTab === tab.id;
@@ -486,25 +696,40 @@ export default function MobileScannerPage({ setActivePage }) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveAdminTab(tab.id)}
-                  className="admin-nav-button"
                   style={{
                     width: '100%',
-                    padding: '0.75rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: isActive ? '1px solid #0284c7' : '1px solid transparent',
-                    background: isActive ? 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%)' : 'transparent',
-                    color: isActive ? '#0284c7' : '#475569',
-                    fontWeight: isActive ? 800 : 600,
-                    fontSize: '0.86rem',
+                    padding: '0.75rem 0.9rem',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: isActive ? 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' : 'transparent',
+                    color: isActive ? '#ffffff' : '#475569',
+                    fontWeight: isActive ? 900 : 700,
+                    fontSize: '0.88rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     gap: '0.75rem',
-                    transition: 'all 0.2s ease'
+                    boxShadow: isActive ? '0 4px 15px rgba(2, 132, 199, 0.35)' : 'none',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <Icon size={18} color={isActive ? '#0284c7' : '#64748b'} />
-                  <span>{tab.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <Icon size={18} color={isActive ? '#ffffff' : '#64748b'} />
+                    <span>{tab.label}</span>
+                  </div>
+                  {tab.count !== null && (
+                    <span style={{
+                      background: isActive ? 'rgba(255, 255, 255, 0.25)' : '#e0f2fe',
+                      color: isActive ? '#ffffff' : '#0369a1',
+                      padding: '0.15rem 0.55rem',
+                      borderRadius: '20px',
+                      fontSize: '0.72rem',
+                      fontWeight: 900
+                    }}>
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -512,14 +737,14 @@ export default function MobileScannerPage({ setActivePage }) {
         </div>
 
         {/* Sidebar Footer: Admin Profile & Logout */}
-        <div className="admin-sidebar-footer" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem', paddingLeft: '0.5rem' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>
+        <div className="admin-sidebar-footer" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem', paddingLeft: '0.25rem' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#fff', fontSize: '0.9rem', boxShadow: '0 2px 8px rgba(2,132,199,0.3)', flexShrink: 0 }}>
               {user?.name?.[0] || 'A'}
             </div>
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name || 'Administrator'}</div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.email || 'admin@americanfitness.com'}</div>
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name || 'Administrator'}</div>
+              <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.email || 'admin@gmail.com'}</div>
             </div>
           </div>
           <button
@@ -530,17 +755,18 @@ export default function MobileScannerPage({ setActivePage }) {
             style={{
               width: '100%',
               padding: '0.65rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid #fecaca',
+              borderRadius: '10px',
+              border: '1.5px solid #fecaca',
               background: '#fef2f2',
               color: '#dc2626',
-              fontWeight: 700,
+              fontWeight: 900,
               fontSize: '0.82rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              boxShadow: '0 2px 6px rgba(220, 38, 38, 0.05)'
             }}
           >
             <LogOut size={16} /> Logout
@@ -548,8 +774,15 @@ export default function MobileScannerPage({ setActivePage }) {
         </div>
       </aside>
 
-      {/* 2. Main Admin Workspace Area (White Background) */}
-      <main className="admin-main">
+      {/* 2. Main Admin Workspace Area (Full Width & Smooth Scroll) */}
+      <main className="admin-main" style={{
+        flex: 1,
+        marginLeft: '260px',
+        minWidth: 0,
+        padding: '2rem 2.5rem',
+        background: '#f8fafc',
+        minHeight: '100vh'
+      }}>
         {/* Metric Analytics Cards Top Bar */}
         <div className="admin-metrics-grid" style={{
           display: 'grid',
@@ -569,10 +802,25 @@ export default function MobileScannerPage({ setActivePage }) {
             <div style={{ fontSize: '0.72rem', color: '#991b1b', textTransform: 'uppercase', fontWeight: 800 }}>Expired Members</div>
             <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#dc2626', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>{analytics.expiredMembers}</div>
           </div>
-          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', boxShadow: '0 2px 10px rgba(2,132,199,0.05)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div
+            onClick={() => setActiveAdminTab('attendance')}
+            style={{
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              boxShadow: '0 2px 10px rgba(2,132,199,0.05)',
+              padding: '1rem 1.25rem',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease, boxShadow 0.2s ease'
+            }}
+            title="Click to view full Attendance Audit Trail"
+          >
             <div>
               <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 800 }}>TODAY'S ATTENDANCE</div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>{analytics.todayAttendance} Entries</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0284c7', marginTop: '0.2rem' }}>{analytics.todayAttendance || (logs || []).length} Entries</div>
             </div>
             <Clock size={24} color="#0284c7" />
           </div>
@@ -1492,6 +1740,42 @@ export default function MobileScannerPage({ setActivePage }) {
                     </div>
                   )}
 
+                  {/* Personal Trainer Selection Dropdown */}
+                  <div style={{ background: '#f0f9ff', padding: '0.65rem 0.85rem', borderRadius: '12px', border: '1.5px solid #bae6fd', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <UserCheck size={16} /> Personal Coach:
+                    </div>
+                    <select
+                      value={m.assignedTrainerId || ''}
+                      onChange={async (e) => {
+                        const newTrainerId = e.target.value;
+                        const res = await assignMemberToTrainer(m.id, newTrainerId);
+                        if (res.success) {
+                          showToast(res.message, 'success');
+                          loadDashboardData();
+                        }
+                      }}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '8px',
+                        border: '1.5px solid #0284c7',
+                        background: '#ffffff',
+                        fontSize: '0.82rem',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                        maxWidth: '220px'
+                      }}
+                    >
+                      <option value="">-- No Trainer Assigned --</option>
+                      {trainersList.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.fullName} ({t.specialization})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Equal & Professional Action Buttons Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                     <button
@@ -1599,6 +1883,30 @@ export default function MobileScannerPage({ setActivePage }) {
                     )}
 
                     <button
+                      onClick={() => {
+                        setSelectedMemberForAssign(m);
+                        setSelectedTrainerIdForAssign(m.assignedTrainerId || '');
+                        setAssignModalOpen(true);
+                      }}
+                      style={{
+                        padding: '0.65rem 0.85rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        background: '#f0f9ff',
+                        border: '1.5px solid #0284c7',
+                        color: '#0284c7',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      <UserCheck size={16} /> Assign Trainer
+                    </button>
+
+                    <button
                       onClick={() => setDeleteConfirmModal(m)}
                       style={{
                         padding: '0.65rem 0.85rem',
@@ -1625,6 +1933,676 @@ export default function MobileScannerPage({ setActivePage }) {
             </div>
           </div>
         )}
+
+        {/* TAB: TRAINER MANAGEMENT & STAFF CONTROL */}
+        {activeAdminTab === 'trainers' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 900, color: '#0f172a', fontFamily: 'var(--font-heading)' }}>
+                  TRAINER MANAGEMENT & COACHING STAFF
+                </h2>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                  Create personal trainer profiles, update specializations, toggle status, and assign gym members.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    setSelectedMemberForAssign(membersList[0] || null);
+                    setSelectedTrainerIdForAssign(trainersList[0]?.id || '');
+                    setAssignModalOpen(true);
+                  }}
+                  style={{
+                    padding: '0.75rem 1.25rem',
+                    background: '#f0f9ff',
+                    border: '1.5px solid #0284c7',
+                    color: '#0284c7',
+                    borderRadius: '12px',
+                    fontWeight: 900,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <UserCheck size={18} /> Assign Member to Trainer
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingTrainer(null);
+                    setTrainerForm({
+                      fullName: '', email: '', password: 'password123', phone: '(555) 000-0000',
+                      specialization: 'Hypertrophy & Strength', experienceYears: 5, bio: '', profileImage: ''
+                    });
+                    setTrainerModalOpen(true);
+                  }}
+                  style={{
+                    padding: '0.75rem 1.4rem',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: 900,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 15px rgba(2, 132, 199, 0.3)'
+                  }}
+                >
+                  <Plus size={18} /> Add New Trainer
+                </button>
+              </div>
+            </div>
+
+            {/* Trainer Roster Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'stretch' }}>
+              {trainersList.map(t => (
+                <div key={t.id} style={{ background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                  <div>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                      <img
+                        src={t.profileImage || 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=400&q=80'}
+                        alt={t.fullName}
+                        style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0284c7', boxShadow: '0 4px 14px rgba(2, 132, 199, 0.25)', flexShrink: 0 }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                          <h3 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0f172a', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-heading)' }}>{t.fullName}</h3>
+                          <span style={{
+                            padding: '0.2rem 0.65rem', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 900, flexShrink: 0,
+                            background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '0.25rem'
+                          }}>
+                            ● ACTIVE
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 800, marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {t.specialization}
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700 }}>{t.experienceYears} Years Master Experience</div>
+                      </div>
+                    </div>
+
+                    <p style={{
+                      fontSize: '0.84rem',
+                      color: '#475569',
+                      lineHeight: '1.45',
+                      marginBottom: '1rem',
+                      height: '2.5rem',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {t.bio || 'Certified Personal Trainer at American Fitness Gym.'}
+                    </p>
+
+                    <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '14px', border: '1.5px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
+                        <span style={{ color: '#64748b', fontWeight: 700 }}>Assigned Members:</span>
+                        <strong style={{ color: '#0284c7', fontWeight: 900, fontSize: '0.95rem' }}>{t.assignedCount || t.assignedMembers?.length || 0} Clients</strong>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedTrainerIdForAssign(t.id);
+                          setSelectedMemberForAssign(membersList[0] || null);
+                          setAssignModalOpen(true);
+                        }}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          background: '#ffffff',
+                          border: '1.5px solid #0284c7',
+                          color: '#0284c7',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          fontWeight: 900,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          boxShadow: '0 2px 4px rgba(2, 132, 199, 0.08)'
+                        }}
+                      >
+                        + Assign
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
+                    <button
+                      onClick={() => {
+                        setEditingTrainer(t);
+                        setTrainerForm({
+                          fullName: t.fullName,
+                          email: t.email,
+                          password: '',
+                          phone: t.phone,
+                          specialization: t.specialization,
+                          experienceYears: t.experienceYears,
+                          bio: t.bio,
+                          profileImage: t.profileImage
+                        });
+                        setTrainerModalOpen(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        color: '#0f172a',
+                        padding: '0.65rem',
+                        borderRadius: '10px',
+                        fontSize: '0.85rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      ✏️ Edit Profile
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTrainer(t.id, t.fullName)}
+                      style={{
+                        background: '#fef2f2',
+                        border: '1.5px solid #fecaca',
+                        color: '#dc2626',
+                        padding: '0.65rem 1rem',
+                        borderRadius: '10px',
+                        fontSize: '0.85rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem'
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CREATE / EDIT TRAINER MODAL */}
+            {trainerModalOpen && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ background: '#ffffff', borderRadius: '20px', padding: '2rem', maxWidth: '550px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', marginBottom: '1.25rem' }}>
+                    {editingTrainer ? `Edit Trainer: ${editingTrainer.fullName}` : 'Create New Trainer Account'}
+                  </h3>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Full Name *</label>
+                      <input type="text" value={trainerForm.fullName} onChange={(e) => setTrainerForm({ ...trainerForm, fullName: e.target.value })} placeholder="e.g. Marcus Vance" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    </div>
+
+                    {!editingTrainer && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Login Email *</label>
+                        <input type="email" value={trainerForm.email} onChange={(e) => setTrainerForm({ ...trainerForm, email: e.target.value })} placeholder="trainer.marcus@americanfitness.com" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Phone Number</label>
+                      <input type="text" value={trainerForm.phone} onChange={(e) => setTrainerForm({ ...trainerForm, phone: e.target.value })} placeholder="(555) 389-2041" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Specialization</label>
+                      <input type="text" value={trainerForm.specialization} onChange={(e) => setTrainerForm({ ...trainerForm, specialization: e.target.value })} placeholder="Hypertrophy & Powerlifting" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Years of Experience</label>
+                      <input type="number" value={trainerForm.experienceYears} onChange={(e) => setTrainerForm({ ...trainerForm, experienceYears: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Profile Image URL</label>
+                      <input type="text" value={trainerForm.profileImage} onChange={(e) => setTrainerForm({ ...trainerForm, profileImage: e.target.value })} placeholder="https://images.unsplash.com/..." style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '0.25rem' }}>Trainer Bio</label>
+                      <textarea value={trainerForm.bio} onChange={(e) => setTrainerForm({ ...trainerForm, bio: e.target.value })} rows={3} style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => setTrainerModalOpen(false)} style={{ flex: 1, padding: '0.75rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button onClick={handleSaveTrainer} style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer' }}>
+                      Save Trainer Profile
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ASSIGN MEMBER TO TRAINER MODAL */}
+            {assignModalOpen && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ background: '#ffffff', borderRadius: '20px', padding: '2rem', maxWidth: '520px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    ASSIGN MEMBER TO PERSONAL TRAINER
+                  </h3>
+                  <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                    Connect a gym member to a certified personal trainer for 1-on-1 coaching.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', marginBottom: '1.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#475569', marginBottom: '0.35rem' }}>Select Gym Member *</label>
+                      <select
+                        value={selectedMemberForAssign?.id || ''}
+                        onChange={(e) => {
+                          const m = membersList.find(mem => mem.id === e.target.value);
+                          setSelectedMemberForAssign(m || null);
+                        }}
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1.5px solid #0284c7', fontWeight: 800, background: '#ffffff', color: '#0f172a' }}
+                      >
+                        <option value="">-- Choose Gym Member --</option>
+                        {membersList.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.fullName} ({m.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#475569', marginBottom: '0.35rem' }}>Select Personal Trainer *</label>
+                      <select
+                        value={selectedTrainerIdForAssign}
+                        onChange={(e) => setSelectedTrainerIdForAssign(e.target.value)}
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1.5px solid #0284c7', fontWeight: 800, background: '#ffffff', color: '#0f172a' }}
+                      >
+                        <option value="">-- Unassign Trainer (No Coach) --</option>
+                        {trainersList.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.fullName} ({t.specialization})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => setAssignModalOpen(false)} style={{ flex: 1, padding: '0.75rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button onClick={handleConfirmAssignTrainer} style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer' }}>
+                      Confirm Assignment
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: ATTENDANCE MANAGEMENT HUB & AUDIT TRAIL */}
+        {activeAdminTab === 'attendance' && (() => {
+          const filteredLogs = (logs || []).filter(item => {
+            // Filter out dummy seed data
+            if (
+              item.email === 'member@americanfitness.com' ||
+              item.id?.startsWith('att_seed_') ||
+              ['Alex Morgan', 'Samantha Reed', 'David Vance', 'Michael Chen', 'Sophia Rossi', 'Daniel Kim'].includes(item.memberName)
+            ) {
+              return false;
+            }
+
+            if (attendanceSearch) {
+              const q = attendanceSearch.toLowerCase();
+              const mName = (item.memberName || '').toLowerCase();
+              const mId = (item.membershipId || item.userId || '').toLowerCase();
+              const mEmail = (item.email || '').toLowerCase();
+              if (!mName.includes(q) && !mId.includes(q) && !mEmail.includes(q)) return false;
+            }
+            if (attendanceFilter !== 'all') {
+              const st = (item.status || '').toUpperCase();
+              if (attendanceFilter === 'GRANTED' && !st.includes('GRANTED') && !st.includes('ACTIVE')) return false;
+              if (attendanceFilter === 'MANUAL' && !st.includes('MANUAL')) return false;
+              if (attendanceFilter === 'DENIED' && !st.includes('DENIED') && !st.includes('EXPIRED')) return false;
+            }
+            if (attendanceDateRange === 'today') {
+              const todayIso = new Date().toISOString().split('T')[0];
+              const todayLocal = new Date().toLocaleDateString('en-CA');
+              const itemDate = String(item.date || todayIso);
+              if (!itemDate.includes(todayIso) && !itemDate.includes(todayLocal) && itemDate !== todayIso) {
+                return false;
+              }
+            }
+            return true;
+          });
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Attendance Header & Actions */}
+              <div style={{
+                background: '#ffffff',
+                padding: '1.5rem',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div>
+                  <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.6rem', fontFamily: 'var(--font-heading)', letterSpacing: '0.02em' }}>
+                    <Clock size={24} color="#0284c7" /> ATTENDANCE
+                  </h2>
+                  <p style={{ margin: '0.25rem 0 0 0', color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
+                    Manage live member check-ins, record manual attendance entries, and export reports.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setShowManualCheckinModal(true)}
+                    style={{
+                      padding: '0.65rem 1.1rem',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                    }}
+                  >
+                    <Plus size={16} /> Record Manual Check-In
+                  </button>
+                  <button
+                    onClick={handleExportAttendanceCSV}
+                    style={{
+                      padding: '0.65rem 1.1rem',
+                      borderRadius: '10px',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      border: '1.5px solid #cbd5e1',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
+                    }}
+                  >
+                    <Download size={16} color="#0284c7" /> Export CSV Report
+                  </button>
+                  <button
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    style={{
+                      padding: '0.65rem 1rem',
+                      borderRadius: '10px',
+                      background: isRefreshing ? '#e2e8f0' : '#ffffff',
+                      color: '#0f172a',
+                      border: '1.5px solid #cbd5e1',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      cursor: isRefreshing ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <RefreshCw
+                      size={15}
+                      color="#0284c7"
+                      style={{
+                        transform: isRefreshing ? 'rotate(360deg)' : 'none',
+                        transition: isRefreshing ? 'transform 0.6s linear' : 'none'
+                      }}
+                    />
+                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
+
+              {refreshToast && (
+                <div style={{
+                  background: '#ecfdf5',
+                  color: '#047857',
+                  border: '1px solid #a7f3d0',
+                  padding: '0.75rem 1.25rem',
+                  borderRadius: '12px',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)'
+                }}>
+                  <CheckCircle2 size={18} color="#10b981" /> {refreshToast}
+                </div>
+              )}
+
+              {/* Attendance Analytics Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '1.1rem 1.25rem', borderRadius: '14px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Today's Total Check-Ins</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#0284c7', marginTop: '0.25rem' }}>{filteredLogs.length} Entries</div>
+                </div>
+                <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '1.1rem 1.25rem', borderRadius: '14px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Digital QR Check-Ins</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#059669', marginTop: '0.25rem' }}>
+                    {filteredLogs.filter(l => !(l.method || '').toLowerCase().includes('manual')).length}
+                  </div>
+                </div>
+                <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '1.1rem 1.25rem', borderRadius: '14px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Desk Manual Entries</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#d97706', marginTop: '0.25rem' }}>
+                    {filteredLogs.filter(l => (l.method || '').toLowerCase().includes('manual')).length}
+                  </div>
+                </div>
+                <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '1.1rem 1.25rem', borderRadius: '14px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Status Pass Rate</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#16a34a', marginTop: '0.25rem' }}>100% Granted</div>
+                </div>
+              </div>
+
+              {/* Filters Bar */}
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+                  <input
+                    type="text"
+                    placeholder="Filter by Member Name, ID, or Email..."
+                    value={attendanceSearch}
+                    onChange={(e) => setAttendanceSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem 0.75rem 2.6rem',
+                      borderRadius: '12px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#0f172a',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      outline: 'none',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                    }}
+                  />
+                  <Search size={18} color="#64748b" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.4rem', background: '#f8fafc', padding: '0.3rem', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                  {[
+                    { id: 'all', label: 'All Statuses' },
+                    { id: 'GRANTED', label: 'Granted ✅' },
+                    { id: 'MANUAL', label: 'Manual 📝' },
+                    { id: 'DENIED', label: 'Denied ❌' }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setAttendanceFilter(f.id)}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        border: 'none',
+                        borderRadius: '8px',
+                        background: attendanceFilter === f.id ? '#0284c7' : 'transparent',
+                        color: attendanceFilter === f.id ? '#ffffff' : '#64748b',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.4rem', background: '#f8fafc', padding: '0.3rem', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                  {[
+                    { id: 'all', label: 'All Dates' },
+                    { id: 'today', label: 'Today Only' }
+                  ].map(d => (
+                    <button
+                      key={d.id}
+                      onClick={() => setAttendanceDateRange(d.id)}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        border: 'none',
+                        borderRadius: '8px',
+                        background: attendanceDateRange === d.id ? '#0f172a' : 'transparent',
+                        color: attendanceDateRange === d.id ? '#ffffff' : '#64748b',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Attendance Records Table */}
+              <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #cbd5e1', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)', overflow: 'hidden' }}>
+                {filteredLogs.length === 0 ? (
+                  <div style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
+                    <History size={48} color="#0284c7" style={{ marginBottom: '1rem' }} />
+                    <h3 style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: 900, margin: 0 }}>No Attendance Logs Found</h3>
+                    <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '0.4rem' }}>
+                      No check-in entries match your current search and filter settings. Scan a QR code or record a manual check-in.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <th style={{ padding: '0.9rem 1.25rem' }}>Member</th>
+                          <th style={{ padding: '0.9rem 1.25rem' }}>Membership & Plan</th>
+                          <th style={{ padding: '0.9rem 1.25rem' }}>Check-In Time</th>
+                          <th style={{ padding: '0.9rem 1.25rem' }}>Zone / Gate</th>
+                          <th style={{ padding: '0.9rem 1.25rem' }}>Method & Status</th>
+                          <th style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLogs.map((item, idx) => {
+                          const isManual = (item.method || '').toLowerCase().includes('manual') || (item.status || '').toLowerCase().includes('manual');
+                          const isDenied = (item.status || '').toLowerCase().includes('denied') || (item.status || '').toLowerCase().includes('expired');
+                          return (
+                            <tr key={item.id || idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }}>
+                              <td style={{ padding: '1rem 1.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <img
+                                    src={item.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                                    alt={item.memberName}
+                                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0284c7' }}
+                                  />
+                                  <div>
+                                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{item.memberName || 'Member'}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.email || 'member@americanfitness.com'}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '1rem 1.25rem' }}>
+                                <div style={{ fontWeight: 700, color: '#0284c7' }}>{item.membershipPlan || 'Pro Athlete VIP'}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>{item.membershipId || item.userId}</div>
+                              </td>
+                              <td style={{ padding: '1rem 1.25rem' }}>
+                                <div style={{ fontWeight: 800, color: '#0f172a' }}>{item.time || '10:00 AM'}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.date || new Date().toISOString().split('T')[0]}</div>
+                              </td>
+                              <td style={{ padding: '1rem 1.25rem' }}>
+                                <div style={{ fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  <ShieldCheck size={14} color="#0284c7" /> {item.zone || item.gate || 'Main Turnstile Gate A'}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Scanned by: {item.scannedBy || 'Admin Desk'}</div>
+                              </td>
+                              <td style={{ padding: '1rem 1.25rem' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.3rem 0.65rem',
+                                  borderRadius: '8px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 800,
+                                  background: isDenied ? '#fef2f2' : (isManual ? '#eff6ff' : '#ecfdf5'),
+                                  color: isDenied ? '#dc2626' : (isManual ? '#1d4ed8' : '#047857'),
+                                  border: isDenied ? '1px solid #fecaca' : (isManual ? '1px solid #bfdbfe' : '1px solid #a7f3d0')
+                                }}>
+                                  {isDenied ? 'DENIED ❌' : (isManual ? 'MANUAL CHECK-IN 📝' : 'GRANTED ENTRY ✅')}
+                                </span>
+                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>{item.method || 'Digital QR Verification'}</div>
+                              </td>
+                              <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
+                                <button
+                                  onClick={() => handleDeleteAttendance(item.id || item._id)}
+                                  title="Delete Attendance Log"
+                                  style={{
+                                    background: '#fef2f2',
+                                    border: '1px solid #fca5a5',
+                                    color: '#dc2626',
+                                    padding: '0.45rem 0.75rem',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 800,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem'
+                                  }}
+                                >
+                                  <Trash2 size={14} /> Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* TAB 4: CMS CONTENT MANAGER */}
         {activeAdminTab === 'cms' && (
@@ -1831,8 +2809,20 @@ export default function MobileScannerPage({ setActivePage }) {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-                  {cmsData?.memberships?.map((m) => (
-                    <div key={m.id} style={{ padding: '1.5rem', background: '#ffffff', borderRadius: '16px', border: m.popular ? '2px solid #0284c7' : '1px solid #cbd5e1', boxShadow: '0 6px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                  {(() => {
+                    const rawM = cmsData?.memberships || [];
+                    const getCardOrder = (plan) => {
+                      const name = (plan.name || '').toLowerCase();
+                      const badge = (plan.badge || '').toLowerCase();
+                      const tier = (plan.tier || '').toLowerCase();
+                      if (name.includes('basic') || badge.includes('starter') || tier.includes('starter') || tier === 'basic') return 1;
+                      if (name.includes('vip') || badge.includes('vip') || tier.includes('vip') || tier === 'elite') return 2;
+                      if (name.includes('pro') || badge.includes('pro') || tier.includes('pro') || tier === 'popular') return 3;
+                      return 4;
+                    };
+                    const sortedM = [...rawM].sort((a, b) => getCardOrder(a) - getCardOrder(b));
+                    return sortedM.map((m) => (
+                      <div key={m.id} style={{ padding: '1.5rem', background: '#ffffff', borderRadius: '16px', border: m.popular ? '2px solid #0284c7' : '1px solid #cbd5e1', boxShadow: '0 6px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                         <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.badge}</span>
                         {m.popular && <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.68rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '12px' }}>MOST POPULAR</span>}
@@ -1841,16 +2831,16 @@ export default function MobileScannerPage({ setActivePage }) {
                         {m.name ? m.name.replace(/^MOST POPULAR\s*/i, '').trim() : 'Membership Plan'}
                       </h4>
                       
-                      {/* High-Contrast Rate Card */}
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.85rem', flexWrap: 'wrap', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      {/* High-Contrast 2-Column Rate Card */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', marginBottom: '0.85rem', background: '#f8fafc', padding: '0.85rem 0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <div>
                           <span style={{ fontSize: '0.72rem', color: '#475569', display: 'block', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Monthly Rate</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0284c7' }}>₹{m.monthlyPrice}</span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0284c7' }}>₹{m.monthlyPrice}</span>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>/mo</span>
                         </div>
-                        <div style={{ borderLeft: '1.5px solid #cbd5e1', paddingLeft: '1rem' }}>
+                        <div style={{ borderLeft: '1.5px solid #cbd5e1', paddingLeft: '0.85rem' }}>
                           <span style={{ fontSize: '0.72rem', color: '#166534', display: 'block', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Annual Rate</span>
-                          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#059669' }}>₹{m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#059669' }}>₹{m.annualPrice || Math.round(m.monthlyPrice * 0.8)}</span>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>/mo</span>
                         </div>
                       </div>
@@ -1879,7 +2869,8 @@ export default function MobileScannerPage({ setActivePage }) {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  ));
+                })()}
                 </div>
               </div>
             )}
@@ -2335,6 +3326,160 @@ export default function MobileScannerPage({ setActivePage }) {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MANUAL ATTENDANCE RECORD MODAL */}
+      {showManualCheckinModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ maxWidth: '520px', width: '100%', padding: '1.75rem', borderRadius: '18px', background: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.3rem', color: '#0f172a', fontWeight: 900, fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Plus size={20} color="#0284c7" /> Record Manual Attendance Check-In
+              </h3>
+              <button onClick={() => setShowManualCheckinModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 800 }}>✕</button>
+            </div>
+
+            <form onSubmit={handleManualCheckinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              <div>
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.86rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                  Select Member / Type ID or Name *
+                </label>
+                <select
+                  value={manualForm.memberId}
+                  onChange={(e) => setManualForm({ ...manualForm, memberId: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#0f172a',
+                    fontWeight: 700,
+                    fontSize: '0.9rem'
+                  }}
+                  required
+                >
+                  <option value="">-- Choose Registered Member --</option>
+                  {(membersList || []).map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.fullName} ({m.membershipId || m.id}) - {m.membershipPlan}
+                    </option>
+                  ))}
+                  <option value="usr_demo_1">Alex Morgan (AFG-882910) - Pro Athlete VIP</option>
+                  <option value="usr_002">Samantha Reed (AFG-720995) - VIP Elite</option>
+                  <option value="usr_003">David Vance (AFG-310944) - Pro Athlete VIP</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.86rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                  Or Type Custom Walk-In Member Name / ID
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe or Walk-In Member"
+                  value={manualForm.memberId}
+                  onChange={(e) => setManualForm({ ...manualForm, memberId: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#0f172a',
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.86rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                  Gym Zone / Gate Entry Location
+                </label>
+                <select
+                  value={manualForm.zone}
+                  onChange={(e) => setManualForm({ ...manualForm, zone: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#0f172a',
+                    fontWeight: 700,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <option value="Main Turnstile Gate A">Main Turnstile Gate A</option>
+                  <option value="Front Desk Entry">Front Desk Entry</option>
+                  <option value="Free Weights Arena">Free Weights Arena</option>
+                  <option value="Cardio Training Floor">Cardio Training Floor</option>
+                  <option value="Zen Studio / Yoga Hall">Zen Studio / Yoga Hall</option>
+                  <option value="Hydro Spa & Recovery Lounge">Hydro Spa & Recovery Lounge</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#0f172a', fontSize: '0.86rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                  Check-In Notes / Reason (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Member forgot smartphone / manual desk verification"
+                  value={manualForm.notes}
+                  onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#0f172a',
+                    fontWeight: 600,
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualCheckinModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#334155',
+                    fontWeight: 800,
+                    borderRadius: '10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingManual}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                  }}
+                >
+                  {isSubmittingManual ? 'Logging Entry...' : 'Confirm & Log Entry'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

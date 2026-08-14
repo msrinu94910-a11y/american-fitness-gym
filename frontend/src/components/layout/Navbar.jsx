@@ -88,41 +88,79 @@ export default function Navbar({ activePage, setActivePage }) {
                 alignItems: 'center',
                 gap: '0.4rem',
                 padding: '0.4rem 0.85rem',
-                background: activePage === 'admin-scanner' ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'rgba(217,119,6,0.12)',
-                color: activePage === 'admin-scanner' ? '#ffffff' : '#d97706',
+                background: activePage === 'admin-scanner' ? 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' : 'rgba(2, 132, 199, 0.12)',
+                color: activePage === 'admin-scanner' ? '#ffffff' : '#0284c7',
                 borderRadius: 'var(--radius-full)',
-                border: '1px solid rgba(217,119,6,0.3)',
+                border: '1px solid rgba(2, 132, 199, 0.3)',
                 fontSize: '0.82rem',
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: 'pointer'
               }}
-              title="Admin Mobile QR Verification Scanner"
+              title="Admin Control Center"
             >
               <QrCode size={15} />
-              <span>Admin Scanner</span>
+              <span>Admin Center</span>
+            </button>
+          )}
+
+          {/* Trainer Portal Gateway Button (Visible for Trainer Staff) */}
+          {(user?.role === 'trainer' || user?.email?.includes('trainer')) && (
+            <button
+              onClick={() => setActivePage('trainer-dashboard')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.4rem 0.85rem',
+                background: activePage === 'trainer-dashboard' ? 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' : 'rgba(2, 132, 199, 0.12)',
+                color: activePage === 'trainer-dashboard' ? '#ffffff' : '#0284c7',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid rgba(2, 132, 199, 0.3)',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+              title="Trainer Portal Dashboard"
+            >
+              <LayoutDashboard size={15} />
+              <span>Trainer Portal</span>
             </button>
           )}
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
               <button
-                onClick={() => setActivePage((user.role === 'admin' || user.email?.includes('admin')) ? 'admin-scanner' : 'dashboard')}
+                onClick={() => {
+                  if (user.role === 'admin' || user.email?.includes('admin')) {
+                    setActivePage('admin-scanner');
+                  } else if (user.role === 'trainer' || user.email?.includes('trainer')) {
+                    setActivePage('trainer-dashboard');
+                  } else {
+                    setActivePage('dashboard');
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
                   padding: '0.4rem 0.85rem',
-                  background: (activePage === 'dashboard' || activePage === 'admin-scanner') ? 'var(--gradient-primary)' : 'rgba(2,132,199,0.08)',
-                  color: (activePage === 'dashboard' || activePage === 'admin-scanner') ? '#ffffff' : '#0284C7',
+                  background: 'var(--gradient-primary)',
+                  color: '#ffffff',
                   borderRadius: 'var(--radius-full)',
-                  border: '1px solid rgba(2,132,199,0.2)',
+                  border: 'none',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
                 <LayoutDashboard size={15} />
-                <span>{user.role === 'admin' ? 'Admin Officer Portal' : `Portal (${user.fullName ? user.fullName.split(' ')[0] : 'Member'})`}</span>
+                <span>
+                  {user.role === 'admin' 
+                    ? 'Admin Officer Portal' 
+                    : user.role === 'trainer' 
+                      ? 'Trainer Portal' 
+                      : `Portal (${user.fullName ? user.fullName.split(' ')[0] : 'Member'})`}
+                </span>
               </button>
 
               <button

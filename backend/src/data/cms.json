@@ -177,13 +177,13 @@
         "Customized Meal & Supplement Blueprint",
         "Permanent Reserved VIP Locker & Towel Service",
         "Unlimited Guest Passes (1 Guest every visit)",
-        "15% Off All Gym Merchandise & Supplements"
+        "20% Off All Gym Merchandise & Supplements"
       ],
       "ctaText": "Join VIP Elite",
-      "featuresText": "Everything in Pro Plan\n2 Monthly 1-on-1 Personal Coaching Sessions\nCustomized Meal & Supplement Blueprint\nPermanent Reserved VIP Locker & Towel Service\nUnlimited Guest Passes (1 Guest every visit)\n15% Off All Gym Merchandise & Supplements"
+      "featuresText": "Everything in Pro Plan\n2 Monthly 1-on-1 Personal Coaching Sessions\nCustomized Meal & Supplement Blueprint\nPermanent Reserved VIP Locker & Towel Service\nUnlimited Guest Passes (1 Guest every visit)\n20% Off All Gym Merchandise & Supplements"
     },
     {
-      "id": "mem_1786523589158",
+      "id": "mem_pro_athlete",
       "name": "Pro Athlete",
       "tier": "pro",
       "monthlyPrice": 1099,
@@ -191,12 +191,15 @@
       "badge": "PRO ATHLETE",
       "popular": true,
       "description": "The complete athletic package including unlimited facility zones and recovery spa.",
-      "ctaText": "Join Plan",
-      "featuresText": "24/7 Access to Main Weight Floor\nLocker Room Access",
+      "ctaText": "Join Pro Athlete",
       "features": [
-        "24/7 Access to Main Weight Floor",
-        "Locker Room Access"
-      ]
+        "24/7 Access to Main Weight Floor & Rigs",
+        "Locker Room & High-Pressure Shower Access",
+        "HYROX & High-Intensity Group Classes",
+        "InBody 770 Monthly Body Scans",
+        "15% Off All Gym Merchandise & Supplements"
+      ],
+      "featuresText": "24/7 Access to Main Weight Floor & Rigs\nLocker Room & High-Pressure Shower Access\nHYROX & High-Intensity Group Classes\nInBody 770 Monthly Body Scans\n15% Off All Gym Merchandise & Supplements"
     }
   ]
 }

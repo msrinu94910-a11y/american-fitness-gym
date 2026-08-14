@@ -17,12 +17,13 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import MobileScannerPage from './pages/MobileScannerPage';
+import TrainerDashboardPage from './pages/TrainerDashboardPage';
 
 function MainAppLayout({ activePage, setActivePage }) {
   const { user } = useApp();
   const isAdmin = user?.role === 'admin' || user?.email?.includes('admin');
-  const isDashboardOrAdmin = activePage === 'dashboard' || activePage === 'scanner' || activePage === 'admin' || activePage === 'admin-scanner' || activePage === 'admin-dashboard';
-  const isAdminPage = activePage === 'scanner' || activePage === 'admin' || activePage === 'admin-scanner' || activePage === 'admin-dashboard' || (activePage === 'dashboard' && isAdmin);
+  const isTrainer = user?.role === 'trainer' || user?.email?.includes('trainer');
+  const isDashboardOrAdmin = activePage === 'dashboard' || activePage === 'trainer' || activePage === 'trainer-dashboard' || activePage === 'scanner' || activePage === 'admin' || activePage === 'admin-scanner' || activePage === 'admin-dashboard';
 
   const renderPage = () => {
     switch (activePage) {
@@ -31,10 +32,13 @@ function MainAppLayout({ activePage, setActivePage }) {
       case 'classes':
         return <ClassesPage />;
       case 'dashboard':
-        // Strict Role Guard: Admin gets Admin Dashboard, User gets Member Dashboard
-        return isAdmin 
-          ? <MobileScannerPage setActivePage={setActivePage} /> 
-          : <DashboardPage setActivePage={setActivePage} />;
+        // Strict Role Guard: Admin gets Admin Dashboard, Trainer gets Trainer Portal, Member gets User Dashboard
+        if (isAdmin) return <MobileScannerPage setActivePage={setActivePage} />;
+        if (isTrainer) return <TrainerDashboardPage setActivePage={setActivePage} />;
+        return <DashboardPage setActivePage={setActivePage} />;
+      case 'trainer':
+      case 'trainer-dashboard':
+        return <TrainerDashboardPage setActivePage={setActivePage} />;
       case 'admin-scanner':
       case 'scanner':
       case 'admin':

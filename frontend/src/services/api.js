@@ -301,31 +301,169 @@ export async function verifyMemberQR(payload) {
     };
 }
 
-export async function fetchAttendanceLogs() {
+// Attendance Storage Helper for offline persistence
+function getLocalAttendanceStore() {
+  if (typeof window === 'undefined') return [];
+  let logs = [];
   try {
-    const res = await fetch(`${API_BASE}/admin/attendance`, {
+    const raw = localStorage.getItem('AFG_LOCAL_ATTENDANCE_STORE');
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) {}
+
+  // Filter out any leftover demo seed data
+  const realLogs = (logs || []).filter(item => !item.id?.startsWith('att_seed_') && item.email !== 'member@americanfitness.com');
+
+  if (realLogs.length !== logs.length) {
+    saveLocalAttendanceStore(realLogs);
+  }
+
+  return realLogs;
+}
+
+function saveLocalAttendanceStore(logs) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('AFG_LOCAL_ATTENDANCE_STORE', JSON.stringify(logs));
+  } catch (e) {}
+}
+
+export async function fetchAttendanceLogs(status = 'all', search = '', dateRange = 'all') {
+  try {
+    const query = new URLSearchParams({ status, search, dateRange }).toString();
+    const res = await fetch(`${API_BASE}/admin/attendance?${query}`, {
       headers: getAuthHeaders()
     });
-    return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.data)) {
+        saveLocalAttendanceStore(data.data);
+        return data;
+      }
+    }
   } catch (err) {
-    return {
-      success: true,
-      data: [
-        {
-          id: 'att_seed_1',
-          membershipId: 'AFG-882910',
-          memberName: 'Alex Morgan',
-          membershipPlan: 'Pro Athlete VIP',
-          status: 'Active',
-          date: new Date().toISOString().split('T')[0],
-          time: '08:15 AM',
-          scannedBy: 'Admin Verification Officer',
-          gate: 'Mobile Camera Gate 1'
-        }
-      ]
-    };
+    console.warn('Backend server offline, loading local attendance logs:', err);
   }
+
+  let logs = getLocalAttendanceStore();
+  const todayIso = new Date().toISOString().split('T')[0];
+  const todayLocal = new Date().toLocaleDateString('en-CA');
+
+  let filtered = logs.filter(item => {
+    if (search) {
+      const q = search.toLowerCase();
+      const mName = (item.memberName || '').toLowerCase();
+      const mId = (item.membershipId || item.userId || '').toLowerCase();
+      if (!mName.includes(q) && !mId.includes(q)) return false;
+    }
+    if (status !== 'all') {
+      const st = (item.status || '').toUpperCase();
+      if (status === 'GRANTED' && !st.includes('GRANTED') && !st.includes('ACTIVE')) return false;
+      if (status === 'MANUAL' && !st.includes('MANUAL')) return false;
+      if (status === 'DENIED' && !st.includes('DENIED') && !st.includes('EXPIRED')) return false;
+    }
+    if (dateRange === 'today') {
+      const itemDate = item.date ? item.date.split('T')[0] : 
+        (item.checkInTime ? item.checkInTime.split('T')[0] : 
+        (item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : ''));
+      if (!itemDate || (itemDate !== todayIso && itemDate !== todayLocal)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  return {
+    success: true,
+    count: filtered.length,
+    data: filtered
+  };
 }
+
+export async function recordManualAttendance(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/attendance`, {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success) return data;
+    }
+  } catch (err) {
+    console.warn('Manual check-in backend offline fallback:', err);
+  }
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const record = {
+    id: 'att_man_' + Date.now(),
+    userId: payload.memberId || ('usr_' + Date.now()),
+    memberName: payload.memberName || 'Member Check-In',
+    membershipId: payload.membershipId || payload.memberId || 'AFG-MANUAL',
+    membershipPlan: payload.membershipPlan || 'Pro Athlete VIP',
+    status: 'MANUAL_ENTRY',
+    date: todayStr,
+    time: timeStr,
+    zone: payload.zone || 'Main Turnstile Gate A',
+    scannedBy: 'Admin Desk Verification',
+    gate: payload.zone || 'Main Desk',
+    method: 'Manual Admin Check-In',
+    notes: payload.notes || ''
+  };
+
+  const store = getLocalAttendanceStore();
+  store.unshift(record);
+  saveLocalAttendanceStore(store);
+
+  return {
+    success: true,
+    message: `Manual attendance recorded for ${record.memberName}!`,
+    data: record
+  };
+}
+
+export async function deleteAttendanceLog(id) {
+  const cleanId = String(id);
+  const updatedStore = getLocalAttendanceStore().filter(a => String(a.id) !== cleanId && String(a._id) !== cleanId);
+  saveLocalAttendanceStore(updatedStore);
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/attendance/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+
+  return {
+    success: true,
+    message: 'Attendance record deleted successfully'
+  };
+}
+
+export async function fetchUserAttendanceHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/user/attendance`, {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+
+  const store = getLocalAttendanceStore();
+  return {
+    success: true,
+    count: store.length,
+    data: store
+  };
+}
+
 
 
 
@@ -476,6 +614,142 @@ export async function deleteCmsMembership(id) {
   const res = await fetch(`${API_BASE}/cms/memberships/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
+  });
+  return res.json();
+}
+
+// ==================== TRAINER MANAGEMENT SYSTEM SERVICES ==================== //
+
+export async function fetchAdminTrainers() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/trainers`, {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {}
+  return { success: true, trainers: [] };
+}
+
+export async function createAdminTrainer(trainerData) {
+  const res = await fetch(`${API_BASE}/admin/trainers`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(trainerData)
+  });
+  return res.json();
+}
+
+export async function updateAdminTrainer(id, trainerData) {
+  const res = await fetch(`${API_BASE}/admin/trainers/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(trainerData)
+  });
+  return res.json();
+}
+
+export async function toggleTrainerStatus(id) {
+  const res = await fetch(`${API_BASE}/admin/trainers/${id}/status`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  return res.json();
+}
+
+export async function deleteAdminTrainer(id) {
+  const res = await fetch(`${API_BASE}/admin/trainers/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return res.json();
+}
+
+export async function assignMemberToTrainer(userId, trainerId) {
+  const res = await fetch(`${API_BASE}/admin/trainers/assign`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ userId, trainerId })
+  });
+  return res.json();
+}
+
+export async function fetchTrainerAssignedMembers() {
+  try {
+    const res = await fetch(`${API_BASE}/trainer/members`, {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {}
+  return { success: true, members: [] };
+}
+
+export async function saveWorkoutPlan(data) {
+  const res = await fetch(`${API_BASE}/trainer/workout-plans`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function fetchMemberWorkoutPlan(userId) {
+  try {
+    const url = userId ? `${API_BASE}/user/workout-plan?userId=${userId}` : `${API_BASE}/user/workout-plan`;
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    if (res.ok) return await res.json();
+  } catch (err) {}
+  return { success: true, plan: null };
+}
+
+export async function saveDietPlan(data) {
+  const res = await fetch(`${API_BASE}/trainer/diet-plans`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function fetchMemberDietPlan(userId) {
+  try {
+    const url = userId ? `${API_BASE}/user/diet-plan?userId=${userId}` : `${API_BASE}/user/diet-plan`;
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    if (res.ok) return await res.json();
+  } catch (err) {}
+  return { success: true, plan: null };
+}
+
+export async function logMemberProgress(data) {
+  const res = await fetch(`${API_BASE}/trainer/progress`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function fetchMemberProgress(userId) {
+  try {
+    const url = userId ? `${API_BASE}/user/progress?userId=${userId}` : `${API_BASE}/user/progress`;
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    if (res.ok) return await res.json();
+  } catch (err) {}
+  return { success: true, history: [] };
+}
+
+export async function fetchAssignedTrainerDetails() {
+  try {
+    const res = await fetch(`${API_BASE}/user/trainer`, { headers: getAuthHeaders() });
+    if (res.ok) return await res.json();
+  } catch (err) {}
+  return { success: true, trainer: null };
+}
+
+export async function chooseMemberTrainer(trainerId) {
+  const res = await fetch(`${API_BASE}/user/choose-trainer`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ trainerId })
   });
   return res.json();
 }
