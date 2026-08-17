@@ -104,18 +104,29 @@ const loginUser = async (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
     const namePart = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim();
 
-    // Check Trainer collection first
-    const trainerAccount = await Trainer.findOne({ email: cleanEmail });
+    // 1. Search User strictly by email first
+    let user = await User.findOne({ email: cleanEmail });
 
-    let user = await User.findOne({
+    // 2. Search Trainer account by email or user ID
+    let trainerAccount = await Trainer.findOne({
       $or: [
         { email: cleanEmail },
-        ...(namePart.length > 2 ? [{ fullName: new RegExp(`^${namePart}$`, 'i') }] : [])
+        ...(user ? [{ userId: user.id }, { id: user.id }] : [])
       ]
     });
 
-    // Detect actual role automatically from DB or email signature
-    let detectedRole = 'user';
+    // 3. If not found by email, check username or fullName
+    if (!user && namePart) {
+      user = await User.findOne({
+        $or: [
+          { id: cleanEmail },
+          { fullName: new RegExp(`^${namePart}$`, 'i') }
+        ]
+      });
+    }
+
+    // Detect actual role
+    let detectedRole = req.body.role || 'user';
     if (trainerAccount || cleanEmail.includes('trainer') || (user && user.role === 'trainer')) {
       detectedRole = 'trainer';
     } else if (cleanEmail.includes('admin') || (user && user.role === 'admin')) {
@@ -155,6 +166,23 @@ const loginUser = async (req, res) => {
         user.qrCode = user.membershipId;
       }
       await user.save();
+    }
+
+    // If logging in as trainer, ensure corresponding Trainer profile exists for this exact user
+    if (detectedRole === 'trainer' && !trainerAccount) {
+      trainerAccount = await Trainer.create({
+        id: 'trn_' + Date.now(),
+        userId: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone || '(555) 000-0000',
+        specialization: 'Hypertrophy & Strength',
+        experienceYears: 5,
+        bio: 'Certified American Fitness Gym Personal Trainer.',
+        profileImage: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=400&q=80',
+        status: 'active',
+        assignedMembers: []
+      });
     }
 
     const userObj = user.toObject();
@@ -1540,10 +1568,10 @@ const SEED_TRAINERS = [
 // GET Admin All Trainers
 const getAdminTrainers = async (req, res) => {
   try {
-    // Seed any missing default trainers so all 6 master trainers are available
-    for (const tSeed of SEED_TRAINERS) {
-      const existing = await Trainer.findOne({ $or: [{ id: tSeed.id }, { email: tSeed.email.toLowerCase() }] });
-      if (!existing) {
+    // Seed default trainers ONLY if Trainer collection is completely empty
+    const trainerCount = await Trainer.countDocuments();
+    if (trainerCount === 0) {
+      for (const tSeed of SEED_TRAINERS) {
         await Trainer.create(tSeed);
         let trUser = await User.findOne({ email: tSeed.email.toLowerCase() });
         if (!trUser) {
@@ -1700,14 +1728,36 @@ const toggleTrainerStatus = async (req, res) => {
 const deleteAdminTrainer = async (req, res) => {
   try {
     const { id } = req.params;
-    const trainer = await Trainer.findOne({ $or: [{ id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }] });
+    const cleanId = String(id);
+    const trainer = await Trainer.findOne({
+      $or: [
+        { id: cleanId },
+        { email: cleanId.toLowerCase() },
+        ...(mongoose.Types.ObjectId.isValid(cleanId) ? [{ _id: cleanId }] : [])
+      ]
+    });
     if (!trainer) {
       return res.status(404).json({ success: false, message: 'Trainer not found.' });
     }
 
-    await Trainer.deleteOne({ _id: trainer._id });
-    await User.deleteOne({ email: trainer.email });
-    await User.updateMany({ assignedTrainerId: trainer.id }, { $set: { assignedTrainerId: null } });
+    const tEmail = trainer.email ? trainer.email.toLowerCase() : '';
+    const tId = trainer.id;
+
+    await Trainer.deleteMany({
+      $or: [
+        { _id: trainer._id },
+        { id: tId },
+        ...(tEmail ? [{ email: tEmail }] : [])
+      ]
+    });
+
+    if (tEmail) {
+      await User.deleteMany({ email: tEmail });
+    }
+    await User.updateMany(
+      { assignedTrainerId: { $in: [tId, String(trainer._id), tEmail] } },
+      { $set: { assignedTrainerId: null } }
+    );
 
     res.json({
       success: true,
@@ -1791,22 +1841,34 @@ const assignMemberToTrainer = async (req, res) => {
 const getTrainerAssignedMembers = async (req, res) => {
   try {
     const trainerUser = req.user;
+    const cleanEmail = trainerUser.email ? trainerUser.email.toLowerCase() : '';
 
-    // Find trainer by email or id
+    // Find trainer profile matching the logged-in user by email, userId, or id
     let trainer = await Trainer.findOne({
       $or: [
-        { email: trainerUser.email ? trainerUser.email.toLowerCase() : '' },
-        { userId: trainerUser.id },
-        { id: trainerUser.id }
+        ...(cleanEmail ? [{ email: cleanEmail }] : []),
+        ...(trainerUser.id ? [{ userId: trainerUser.id }, { id: trainerUser.id }] : []),
+        ...(trainerUser.fullName ? [{ fullName: new RegExp(`^${trainerUser.fullName.trim()}$`, 'i') }] : [])
       ]
     });
 
+    // If no Trainer profile document exists yet for this specific user, create one dynamically for them
     if (!trainer) {
-      trainer = await Trainer.findOne({ status: 'active' });
-    }
-
-    if (!trainer) {
-      return res.json({ success: true, trainer: null, members: [] });
+      const tId = 'trn_' + Date.now();
+      const formattedName = trainerUser.fullName || (cleanEmail ? cleanEmail.split('@')[0] : 'Master Trainer');
+      trainer = await Trainer.create({
+        id: tId,
+        userId: trainerUser.id || ('usr_' + Date.now()),
+        fullName: formattedName,
+        email: cleanEmail || `${tId}@americanfitness.com`,
+        phone: trainerUser.phone || '(555) 000-0000',
+        specialization: 'Hypertrophy & Strength',
+        experienceYears: 5,
+        bio: 'Certified American Fitness Gym Personal Trainer.',
+        profileImage: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=400&q=80',
+        status: 'active',
+        assignedMembers: []
+      });
     }
 
     // Collect ALL identifiers associated with this trainer

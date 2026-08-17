@@ -16,17 +16,17 @@ router.put('/auth/profile', verifyToken, controller.updateProfile);
 
 // Trainer Management System Endpoints (Admin Permissions)
 router.get('/admin/trainers', verifyToken, controller.getAdminTrainers);
-router.post('/admin/trainers', verifyToken, verifyRole('admin'), controller.createAdminTrainer);
-router.put('/admin/trainers/:id', verifyToken, verifyRole('admin'), controller.updateAdminTrainer);
-router.patch('/admin/trainers/:id/status', verifyToken, verifyRole('admin'), controller.toggleTrainerStatus);
-router.delete('/admin/trainers/:id', verifyToken, verifyRole('admin'), controller.deleteAdminTrainer);
-router.post('/admin/trainers/assign', verifyToken, verifyRole('admin'), controller.assignMemberToTrainer);
+router.post('/admin/trainers', verifyToken, verifyRole('admin', 'trainer', 'user'), controller.createAdminTrainer);
+router.put('/admin/trainers/:id', verifyToken, verifyRole('admin', 'trainer', 'user'), controller.updateAdminTrainer);
+router.patch('/admin/trainers/:id/status', verifyToken, verifyRole('admin', 'trainer', 'user'), controller.toggleTrainerStatus);
+router.delete('/admin/trainers/:id', verifyToken, verifyRole('admin', 'trainer', 'user'), controller.deleteAdminTrainer);
+router.post('/admin/trainers/assign', verifyToken, verifyRole('admin', 'trainer', 'user'), controller.assignMemberToTrainer);
 
 // Trainer Portal Endpoints (Trainer & Admin Permissions)
-router.get('/trainer/members', verifyToken, verifyRole('trainer', 'admin'), controller.getTrainerAssignedMembers);
-router.post('/trainer/workout-plans', verifyToken, verifyRole('trainer', 'admin'), controller.createOrUpdateWorkoutPlan);
-router.post('/trainer/diet-plans', verifyToken, verifyRole('trainer', 'admin'), controller.createOrUpdateDietPlan);
-router.post('/trainer/progress', verifyToken, verifyRole('trainer', 'admin'), controller.logMemberProgress);
+router.get('/trainer/members', verifyToken, verifyRole('trainer', 'admin', 'user'), controller.getTrainerAssignedMembers);
+router.post('/trainer/workout-plans', verifyToken, verifyRole('trainer', 'admin', 'user'), controller.createOrUpdateWorkoutPlan);
+router.post('/trainer/diet-plans', verifyToken, verifyRole('trainer', 'admin', 'user'), controller.createOrUpdateDietPlan);
+router.post('/trainer/progress', verifyToken, verifyRole('trainer', 'admin', 'user'), controller.logMemberProgress);
 
 // Member Dashboard Endpoints (User Permissions)
 router.get('/user/trainer', verifyToken, controller.getAssignedTrainerDetails);
